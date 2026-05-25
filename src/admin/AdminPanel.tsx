@@ -11,7 +11,6 @@ interface Props {
   categories: string[]
   orders: Order[]
   onAddProduct: (p: Omit<Product, 'id'>) => void
-  onUpdateStock: (id: number, stock: number) => void
   onRemoveProduct: (id: number) => void
   onUpdateProduct: (id: number, updates: Partial<Product>) => void
   onAddCategory: (name: string) => void
@@ -22,7 +21,7 @@ interface Props {
 
 export default function AdminPanel({
   products, categories, orders,
-  onAddProduct, onUpdateStock, onRemoveProduct, onUpdateProduct,
+  onAddProduct, onRemoveProduct, onUpdateProduct,
   onAddCategory, onRemoveCategory, onExit, light,
 }: Props) {
   const [tab,    setTab]    = useState('dashboard')
@@ -45,7 +44,7 @@ export default function AdminPanel({
       )}
       {tab === 'products'   && (
         <ProductsTab products={products} categories={categories}
-          onAdd={onAddProduct} onUpdateStock={onUpdateStock} onRemove={onRemoveProduct}
+          onAdd={onAddProduct} onRemove={onRemoveProduct}
           onUpdate={onUpdateProduct} light={light} initialFilter={filter} />
       )}
       {tab === 'categories' && (

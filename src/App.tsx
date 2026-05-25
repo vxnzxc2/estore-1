@@ -72,7 +72,7 @@ export default function App() {
       <div className={light ? 'light' : ''}>
         <AdminPanel
           products={products} categories={categories} orders={orders}
-          onAddProduct={addProduct} onUpdateStock={updateStock}
+          onAddProduct={addProduct}
           onRemoveProduct={removeProduct} onUpdateProduct={updateProduct}
           onAddCategory={addCategory} onRemoveCategory={removeCategory}
           onExit={() => { setAdminMode(false); setLoggedIn(false) }}
