@@ -15,7 +15,7 @@ import AdminPanel     from './admin/AdminPanel'
 export default function App() {
   const {
     products, categories, orders,
-    addProduct, updateStock, removeProduct, updateProduct,
+    addProduct, removeProduct, updateProduct,
     addCategory, removeCategory, placeOrder,
   } = useStore()
 
