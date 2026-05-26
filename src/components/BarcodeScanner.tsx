@@ -64,7 +64,6 @@ export default function BarcodeScanner({ onDetected, onClose, light }: Props) {
   const bg    = light ? 'bg-white'    : 'bg-[#0d1424]'
   const title = light ? 'text-gray-900' : 'text-white'
   const sub   = light ? 'text-gray-400' : 'text-slate-400'
-  const closeB= light ? 'bg-gray-100 text-gray-500' : 'bg-slate-700 text-slate-300'
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col">
