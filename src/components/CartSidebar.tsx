@@ -162,7 +162,7 @@ function OrderConfirmDialog({ total, grandTotal, onConfirm, onCancel, light }: {
   )
 }
 
-export default function CartSidebar({ cart, onQtyChange, onRemove, onRemoveSelected, onClear, onClose, onPlaceOrder, light }: Props) {
+export default function CartSidebar({ cart, onQtyChange, onRemoveSelected, onClear, onClose, onPlaceOrder, light }: Props) {
   const [selected,       setSelected]       = useState<Set<number>>(new Set())
   const [showDeleteConf, setShowDeleteConf] = useState(false)
   const [showOrderConf,  setShowOrderConf]  = useState(false)

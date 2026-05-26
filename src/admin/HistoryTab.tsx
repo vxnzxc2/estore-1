@@ -39,7 +39,6 @@ export default function HistoryTab({ orders, light }: Props) {
 
   // ── Styling ──────────────────────────────────────────────────────────────
   const bg      = light ? 'bg-white border border-gray-200 shadow-sm'       : 'bg-slate-800/60 border border-white/5'
-  const bg2     = light ? 'bg-gray-50 border border-gray-100'               : 'bg-slate-900/40 border border-white/5'
   const title   = light ? 'text-gray-900'                                   : 'text-white'
   const sub     = light ? 'text-gray-400'                                   : 'text-slate-400'
   const muted   = light ? 'text-gray-300'                                   : 'text-slate-600'
