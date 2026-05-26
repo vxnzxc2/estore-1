@@ -47,7 +47,7 @@ export default function LoginPage({ onLogin, onCancel, light }: Props) {
             <Store size={28} className="text-white" strokeWidth={2.5} />
           </div>
           <div className="text-center">
-            <h1 className={`text-2xl font-bold ${title}`} style={{ fontFamily: 'Syne, sans-serif' }}>Aling Ronan's</h1>
+            <h1 className={`text-2xl font-bold ${title}`} style={{ fontFamily: 'Syne, sans-serif' }}>Evaristo's</h1>
             <p className={`${sub} text-sm mt-0.5`}>Admin Panel</p>
           </div>
         </div>

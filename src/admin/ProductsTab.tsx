@@ -6,6 +6,7 @@ interface Props {
   products: Product[]
   categories: string[]
   onAdd: (product: Omit<Product, 'id'>) => void
+  onUpdateStock: (id: number, stock: number) => void
   onRemove: (id: number) => void
   onUpdate: (id: number, updates: Partial<Product>) => void
   light?: boolean
@@ -14,7 +15,7 @@ interface Props {
 
 const BLANK = { name: '', price: 0, category: '', image: '', badge: '', stock: 0, barcode: '' }
 
-export default function ProductsTab({ products, categories, onAdd, onRemove, onUpdate, light, initialFilter }: Props) {
+export default function ProductsTab({ products, categories, onAdd, onUpdateStock, onRemove, onUpdate, light, initialFilter }: Props) {
   const [showForm,    setShowForm]    = useState(false)
   const [form,        setForm]        = useState(BLANK)
   const [editProduct, setEditProduct] = useState<number | null>(null)

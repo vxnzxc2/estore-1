@@ -2,51 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Aling Ronan's Sari-Sari Store</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap"
-      rel="stylesheet"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Evaristo's Sari-Sari Store</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      (function(){
-        if (!window.chatbase || window.chatbase("getState") !== "initialized") {
-          window.chatbase = function() {
-            if (!window.chatbase.q) {
-              window.chatbase.q = []
-            }
-            window.chatbase.q.push(arguments)
-          }
-          window.chatbase = new Proxy(window.chatbase, {
-            get: function(target, prop) {
-              if (prop === "q") {
-                return target.q
-              }
-              return function() {
-                return target[prop].apply(target, arguments)
-              }
-            }
-          })
-        }
-
-        function onLoad() {
-          var script = document.createElement("script")
-          script.src = "https://www.chatbase.co/embed.min.js"
-          script.id = "Pw6T46OX22I8TZ_tfEOVs"
-          script.domain = "www.chatbase.co"
-          document.body.appendChild(script)
-        }
-
-        if (document.readyState === "complete") {
-          onLoad()
-        } else {
-          window.addEventListener("load", onLoad)
-        }
-      })();
-    </script>
   </body>
 </html>
