@@ -16,7 +16,7 @@ import AdminPanel     from './admin/AdminPanel'
 export default function App() {
   const {
     products, categories, orders,
-    addProduct, updateStock, removeProduct, updateProduct,
+    addProduct, removeProduct, updateProduct,
     addCategory, removeCategory, placeOrder,
   } = useStore()
 
@@ -77,7 +77,7 @@ export default function App() {
     return (
       <AdminPanel
         products={products} categories={categories} orders={orders}
-        onAddProduct={addProduct} onUpdateStock={updateStock}
+        onAddProduct={addProduct}
         onRemoveProduct={removeProduct} onUpdateProduct={updateProduct}
         onAddCategory={addCategory} onRemoveCategory={removeCategory}
         onExit={() => { setAdminMode(false); setLoggedIn(false) }}
@@ -210,7 +210,6 @@ export default function App() {
         <CartSidebar
           cart={cart}
           onQtyChange={setQty}
-          onRemove={removeItem}
           onRemoveSelected={removeSelected}
           onClear={clearCart}
           onClose={() => setCartOpen(false)}

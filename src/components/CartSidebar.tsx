@@ -7,7 +7,6 @@ const FREE_DELIVERY_AT = 1000
 interface Props {
   cart: CartItemType[]
   onQtyChange: (id: number, qty: number) => void
-  onRemove: (id: number) => void
   onRemoveSelected: (ids: number[]) => void
   onClear: () => void
   onClose: () => void
