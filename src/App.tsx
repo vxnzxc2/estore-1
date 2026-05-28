@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Search, X, PartyPopper } from 'lucide-react'
 import type { CartItem, Product } from './types'
 import { useStore } from './store'
@@ -8,6 +8,8 @@ import ProductCard    from './components/ProductCard'
 import CartSidebar    from './components/CartSidebar'
 import Footer         from './components/Footer'
 import BottomNav      from './components/BottomNav'
+import SettingsPanel  from './components/SettingsPanel'
+import StoreLocator   from './components/StoreLocator'
 import BarcodeScanner from './components/BarcodeScanner'
 import ScanResult     from './components/ScanResult'
 import LoginPage      from './admin/LoginPage'
@@ -16,21 +18,25 @@ import AdminPanel     from './admin/AdminPanel'
 export default function App() {
   const {
     products, categories, orders,
-    addProduct, removeProduct, updateProduct,
+    addProduct, updateStock, removeProduct, updateProduct,
     addCategory, removeCategory, placeOrder,
   } = useStore()
 
-  const [cart,        setCart]        = useState<CartItem[]>([])
-  const [category,    setCategory]    = useState('All')
-  const [search,      setSearch]      = useState('')
-  const [cartOpen,    setCartOpen]    = useState(false)
-  const [orderPlaced, setOrderPlaced] = useState(false)
-  const [time,        setTime]        = useState(new Date())
-  const [adminMode,   setAdminMode]   = useState(false)
-  const [loggedIn,    setLoggedIn]    = useState(false)
-  const [light,       setLight]       = useState(false)
-  const [showScanner, setShowScanner] = useState(false)
-  const [scanResult,  setScanResult]  = useState<{ barcode: string; product: Product | null } | null>(null)
+  const [cart,         setCart]         = useState<CartItem[]>([])
+  const [category,     setCategory]     = useState('All')
+  const [search,       setSearch]       = useState('')
+  const [cartOpen,     setCartOpen]     = useState(false)
+  const [orderPlaced,  setOrderPlaced]  = useState(false)
+  const [time,         setTime]         = useState(new Date())
+  const [adminMode,    setAdminMode]    = useState(false)
+  const [loggedIn,     setLoggedIn]     = useState(false)
+  const [light,        setLight]        = useState(false)
+  const [showScanner,  setShowScanner]  = useState(false)
+  const [scanResult,   setScanResult]   = useState<{ barcode: string; product: Product | null } | null>(null)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showLocator,  setShowLocator]  = useState(false)
+  const [searchFocus,  setSearchFocus]  = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000)
@@ -45,19 +51,18 @@ export default function App() {
       return [...prev, { ...product, qty }]
     })
 
-  const setQty          = (id: number, qty: number) => setCart(prev => prev.map(i => i.id === id ? { ...i, qty } : i))
-  const removeItem      = (id: number)              => setCart(prev => prev.filter(i => i.id !== id))
-  const removeSelected  = (ids: number[])           => setCart(prev => prev.filter(i => !ids.includes(i.id)))
-  const clearCart       = ()                        => setCart([])
+  const setQty         = (id: number, qty: number)   => setCart(prev => prev.map(i => i.id === id ? { ...i, qty } : i))
+  const removeItem     = (id: number)                => setCart(prev => prev.filter(i => i.id !== id))
+  const removeSelected = (ids: number[])             => setCart(prev => prev.filter(i => !ids.includes(i.id)))
+  const clearCart      = ()                          => setCart([])
 
-  // Buy Now — add to cart then open cart
   const buyNow = (product: Product, qty: number) => {
     addToCart(product, qty)
     setCartOpen(true)
   }
 
-  const handlePlaceOrder = () => {
-    placeOrder(cart)
+  const handlePlaceOrder = (method: string, fulfillment: string) => {
+    placeOrder(cart, method, fulfillment)
     setOrderPlaced(true)
     setCart([])
     setCartOpen(false)
@@ -77,7 +82,7 @@ export default function App() {
     return (
       <AdminPanel
         products={products} categories={categories} orders={orders}
-        onAddProduct={addProduct}
+        onAddProduct={addProduct} onUpdateStock={updateStock}
         onRemoveProduct={removeProduct} onUpdateProduct={updateProduct}
         onAddCategory={addCategory} onRemoveCategory={removeCategory}
         onExit={() => { setAdminMode(false); setLoggedIn(false) }}
@@ -89,11 +94,22 @@ export default function App() {
   // ── Store ─────────────────────────────────────────────────────────────────
   const allCats  = ['All', ...categories]
   const totalQty = cart.reduce((s, i) => s + i.qty, 0)
+
+  // Search: filter + scroll to first match
   const filtered = products.filter(p => {
     const matchCat    = category === 'All' || p.category === category
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase())
+    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
+                        p.category.toLowerCase().includes(search.toLowerCase())
     return matchCat && matchSearch
   })
+
+  // Auto scroll to highlighted product
+  useEffect(() => {
+    if (search && filtered.length > 0) {
+      const el = document.getElementById(`product-${filtered[0].id}`)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [search])
 
   const bg     = light ? 'bg-gray-50'      : 'bg-[#080c14]'
   const text   = light ? 'text-gray-900'   : 'text-white'
@@ -115,20 +131,27 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 pt-5">
 
-        {/* Page title */}
-        <div className="mb-5">
+        {/* Title */}
+        <div className="mb-4">
           <h2 className={`text-2xl sm:text-3xl font-bold ${text} tracking-tight`} style={{ fontFamily: 'Syne, sans-serif' }}>
             Our Products
           </h2>
-          <p className={`${sub} text-xs sm:text-sm mt-0.5`}>Fresh stocks everyday · FREE delivery on ₱1000+</p>
+          <p className={`${sub} text-xs sm:text-sm mt-0.5`}>FREE delivery on ₱1000+ · Fresh stocks daily</p>
         </div>
 
         {/* Search */}
-        <div className={`flex items-center gap-2.5 ${card} border ${border} rounded-xl px-3.5 py-2.5 mb-4`}>
+        <div className={`flex items-center gap-2.5 ${card} border ${border} rounded-xl px-3.5 py-2.5 mb-4 transition-all ${searchFocus ? 'ring-2 ring-amber-400/50' : ''}`}>
           <Search size={15} className={`${sub} shrink-0`} strokeWidth={2} />
-          <input type="text" placeholder="Search products…" value={search}
+          <input
+            ref={searchRef}
+            type="text"
+            placeholder="Search product name or category…"
+            value={search}
+            onFocus={() => setSearchFocus(true)}
+            onBlur={() => setSearchFocus(false)}
             onChange={e => setSearch(e.target.value)}
-            className={`flex-1 outline-none text-sm bg-transparent ${light ? 'text-gray-800 placeholder:text-gray-400' : 'text-white placeholder:text-slate-500'}`} />
+            className={`flex-1 outline-none text-sm bg-transparent ${light ? 'text-gray-800 placeholder:text-gray-400' : 'text-white placeholder:text-slate-500'}`}
+          />
           {search && (
             <button onClick={() => setSearch('')} className={`${sub} hover:text-red-400 transition-colors`}>
               <X size={14} strokeWidth={2.5} />
@@ -136,7 +159,32 @@ export default function App() {
           )}
         </div>
 
-        {/* Categories - horizontal scroll */}
+        {/* Search suggestion dropdown */}
+        {search && filtered.length > 0 && searchFocus && (
+          <div className={`mb-3 rounded-2xl border ${border} ${card} overflow-hidden shadow-xl`}>
+            {filtered.slice(0, 5).map(p => (
+              <button key={p.id}
+                onMouseDown={() => {
+                  setSearch(p.name)
+                  setTimeout(() => {
+                    document.getElementById(`product-${p.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  }, 100)
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left ${light ? 'hover:bg-gray-50 border-b border-gray-100 last:border-0' : 'hover:bg-slate-700/40 border-b border-white/5 last:border-0'} transition-colors`}
+              >
+                <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                  {p.image && <img src={p.image} alt={p.name} className="w-full h-full object-cover" />}
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-sm font-medium ${text} truncate`}>{p.name}</p>
+                  <p className={`text-xs ${sub}`}>{p.category} · ₱{p.price}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Categories */}
         <div className="mb-4">
           <CategoryFilter active={category} categories={allCats} onChange={setCategory} light={light} />
         </div>
@@ -150,7 +198,7 @@ export default function App() {
           </span>
         </div>
 
-        {/* Product grid */}
+        {/* Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
           {filtered.map(p => (
             <ProductCard
@@ -161,6 +209,7 @@ export default function App() {
               onBuyNow={buyNow}
               onRemove={removeItem}
               light={light}
+              highlight={!!search && (p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()))}
             />
           ))}
           {filtered.length === 0 && (
@@ -180,17 +229,27 @@ export default function App() {
       {/* Bottom Nav */}
       <BottomNav
         totalQty={totalQty}
-        light={light}
         onCartOpen={() => setCartOpen(true)}
         onScan={() => setShowScanner(true)}
-        onSettings={() => setAdminMode(true)}
-        onToggleLight={() => setLight(l => !l)}
+        onSettings={() => setShowSettings(true)}
       />
 
-      {/* Scanner */}
-      {showScanner && (
-        <BarcodeScanner onDetected={handleBarcodeDetected} onClose={() => setShowScanner(false)} light={light} />
+      {/* Settings panel */}
+      {showSettings && (
+        <SettingsPanel
+          light={light}
+          onToggleLight={() => setLight(l => !l)}
+          onOpenAdmin={() => { setShowSettings(false); setAdminMode(true) }}
+          onClose={() => setShowSettings(false)}
+          onOpenStoreLocator={() => { setShowSettings(false); setShowLocator(true) }}
+        />
       )}
+
+      {/* Store locator */}
+      {showLocator && <StoreLocator onClose={() => setShowLocator(false)} light={light} />}
+
+      {/* Scanner */}
+      {showScanner && <BarcodeScanner onDetected={handleBarcodeDetected} onClose={() => setShowScanner(false)} light={light} />}
 
       {/* Scan result */}
       {scanResult && (
@@ -210,6 +269,7 @@ export default function App() {
         <CartSidebar
           cart={cart}
           onQtyChange={setQty}
+          onRemove={removeItem}
           onRemoveSelected={removeSelected}
           onClear={clearCart}
           onClose={() => setCartOpen(false)}

@@ -11,6 +11,7 @@ interface Props {
   categories: string[]
   orders: Order[]
   onAddProduct: (p: Omit<Product, 'id'>) => void
+  onUpdateStock: (id: number, stock: number) => void
   onRemoveProduct: (id: number) => void
   onUpdateProduct: (id: number, updates: Partial<Product>) => void
   onAddCategory: (name: string) => void
@@ -21,7 +22,7 @@ interface Props {
 
 export default function AdminPanel({
   products, categories, orders,
-  onAddProduct, onRemoveProduct, onUpdateProduct,
+  onAddProduct, onUpdateStock, onRemoveProduct, onUpdateProduct,
   onAddCategory, onRemoveCategory, onExit, light,
 }: Props) {
   const [tab,    setTab]    = useState('dashboard')
@@ -35,21 +36,33 @@ export default function AdminPanel({
   }
 
   return (
-    <AdminLayout activeTab={tab} onTabChange={t => { setTab(t); setFilter(undefined) }} onLogout={onExit}
-      productCount={products.length} categoryCount={categories.length}
-      lowStockCount={lowStockCount} orderCount={orders.length} light={light}>
-
+    <AdminLayout
+      activeTab={tab}
+      onTabChange={t => { setTab(t); setFilter(undefined) }}
+      onLogout={onExit}
+      productCount={products.length}
+      categoryCount={categories.length}
+      lowStockCount={lowStockCount}
+      orderCount={orders.length}
+      light={light}
+    >
       {tab === 'dashboard'  && (
         <Dashboard products={products} categories={categories} orders={orders} light={light} onNavigate={handleNavigate} />
       )}
       {tab === 'products'   && (
-        <ProductsTab products={products} categories={categories}
-          onAdd={onAddProduct} onRemove={onRemoveProduct}
-          onUpdate={onUpdateProduct} light={light} initialFilter={filter} />
+        <ProductsTab
+          products={products}
+          categories={categories}
+          onAdd={onAddProduct}
+          onUpdateStock={onUpdateStock}
+          onRemove={onRemoveProduct}
+          onUpdate={onUpdateProduct}
+          light={light}
+          initialFilter={filter}
+        />
       )}
       {tab === 'categories' && (
-        <CategoriesTab categories={categories} products={products}
-          onAdd={onAddCategory} onRemove={onRemoveCategory} light={light} />
+        <CategoriesTab categories={categories} products={products} onAdd={onAddCategory} onRemove={onRemoveCategory} light={light} />
       )}
       {tab === 'history'    && <HistoryTab orders={orders} light={light} />}
     </AdminLayout>

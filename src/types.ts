@@ -13,17 +13,6 @@ export interface CartItem extends Product {
   qty: number
 }
 
-export type Category =
-  | 'All'
-  | 'Snacks'
-  | 'Drinks'
-  | 'Canned Goods'
-  | 'Condiments'
-  | 'Personal Care'
-  | 'Sachets'
-  | 'Candy'
-  | string
-
 export interface OrderItem {
   id: number
   name: string
@@ -39,6 +28,22 @@ export interface Order {
   total: number
   deliveryFee: number
   grandTotal: number
-  placedAt: string   // ISO date string
+  placedAt: string
   status: 'completed'
+  method?: string
+  fulfillment?: string
 }
+
+export type Category =
+  | 'All'
+  | 'New Arrivals'
+  | 'Best Sellers'
+  | 'Promos'
+  | 'Snacks'
+  | 'Drinks'
+  | 'Canned Goods'
+  | 'Condiments'
+  | 'Personal Care'
+  | 'Sachets'
+  | 'Candy'
+  | string
