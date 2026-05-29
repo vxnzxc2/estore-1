@@ -1,4 +1,4 @@
-import { X, Sun, Moon, Shield, Lock, Store, MapPin, ChevronRight, Info } from 'lucide-react'
+import { X, Sun, Moon, Shield, Lock, Store, MapPin, ChevronRight, Info, History } from 'lucide-react'
 
 interface Props {
   light: boolean
@@ -6,9 +6,10 @@ interface Props {
   onOpenAdmin: () => void
   onClose: () => void
   onOpenStoreLocator: () => void
+  onOpenHistory: () => void
 }
 
-export default function SettingsPanel({ light, onToggleLight, onOpenAdmin, onClose, onOpenStoreLocator }: Props) {
+export default function SettingsPanel({ light, onToggleLight, onOpenAdmin, onClose, onOpenStoreLocator, onOpenHistory }: Props) {
   const bg      = light ? 'bg-white'       : 'bg-[#0d1424]'
   const overlay = light ? 'bg-black/20'    : 'bg-black/60'
   const hdr     = light ? 'border-gray-100': 'border-white/5'
@@ -16,14 +17,16 @@ export default function SettingsPanel({ light, onToggleLight, onOpenAdmin, onClo
   const sub     = light ? 'text-gray-400'  : 'text-slate-400'
   const row     = light ? 'hover:bg-gray-50 border-gray-100' : 'hover:bg-slate-800/60 border-white/5'
   const sec     = light ? 'text-gray-400'  : 'text-slate-500'
-  const toggle  = light
-    ? 'bg-amber-500'
-    : 'bg-amber-500'
+  // accessibility: the toggle styling is derived from `light` above
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
       <div className={`absolute inset-0 ${overlay} backdrop-blur-sm`} onClick={onClose} />
-      <div className={`animate-slide-right relative ${bg} w-full max-w-sm h-full flex flex-col shadow-2xl border-l ${hdr} overflow-hidden`}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        onClick={e => e.stopPropagation()}
+        className={`animate-slide-right relative ${bg} w-full max-w-sm h-full flex flex-col shadow-2xl border-l ${hdr} overflow-hidden`}>
 
         {/* Header */}
         <div className={`flex items-center justify-between px-5 py-4 border-b ${hdr}`}>
@@ -52,10 +55,10 @@ export default function SettingsPanel({ light, onToggleLight, onOpenAdmin, onClo
                   <p className={`${sub} text-xs`}>Tap to switch theme</p>
                 </div>
               </div>
-              {/* Toggle switch */}
+              {/* Toggle switch — right = dark mode ON, left = light mode (dark OFF) */}
               <button onClick={onToggleLight}
-                className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${light ? 'bg-amber-500' : 'bg-slate-600'}`}>
-                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${light ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${!light ? 'bg-amber-500' : 'bg-slate-300'}`}>
+                <span className={`absolute top-0.5 left-0 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${!light ? 'translate-x-[26px]' : 'translate-x-0.5'}`} />
               </button>
             </div>
           </div>
@@ -64,6 +67,18 @@ export default function SettingsPanel({ light, onToggleLight, onOpenAdmin, onClo
           <div className="px-5 pt-4 pb-2">
             <p className={`text-xs font-semibold ${sec} uppercase tracking-widest mb-3`}>Store</p>
             <div className="space-y-2">
+              <button onClick={() => { onClose(); onOpenHistory() }}
+                className={`w-full flex items-center gap-3 p-4 rounded-2xl border ${row} transition-colors`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${light ? 'bg-purple-50' : 'bg-purple-500/10'}`}>
+                  <History size={18} className="text-purple-500" strokeWidth={2} />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className={`font-semibold ${title} text-sm`}>Order History</p>
+                  <p className={`${sub} text-xs`}>View all your past orders</p>
+                </div>
+                <ChevronRight size={16} className={sub} strokeWidth={2} />
+              </button>
+
               <button onClick={onOpenStoreLocator}
                 className={`w-full flex items-center gap-3 p-4 rounded-2xl border ${row} transition-colors`}>
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${light ? 'bg-blue-50' : 'bg-blue-500/10'}`}>

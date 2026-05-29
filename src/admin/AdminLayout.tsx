@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LayoutDashboard, Package, Tag, LogOut, Menu, Store, ChevronRight, History, X } from 'lucide-react'
+import { LayoutDashboard, Package, Tag, LogOut, Menu, Store, ChevronRight, History, X, Megaphone } from 'lucide-react'
 
 interface Props {
   children: React.ReactNode
@@ -10,17 +10,19 @@ interface Props {
   categoryCount: number
   lowStockCount: number
   orderCount: number
+  announcementCount: number
   light?: boolean
 }
 
 const NAV = [
-  { id: 'dashboard',  label: 'Dashboard',  icon: LayoutDashboard },
-  { id: 'products',   label: 'Products',   icon: Package },
-  { id: 'categories', label: 'Categories', icon: Tag },
-  { id: 'history',    label: 'History',    icon: History },
+  { id: 'dashboard',     label: 'Dashboard',     icon: LayoutDashboard },
+  { id: 'products',      label: 'Products',      icon: Package },
+  { id: 'categories',    label: 'Categories',    icon: Tag },
+  { id: 'history',       label: 'History',       icon: History },
+  { id: 'announcements', label: 'Announcements', icon: Megaphone },
 ]
 
-export default function AdminLayout({ children, activeTab, onTabChange, onLogout, productCount, categoryCount, lowStockCount, orderCount, light }: Props) {
+export default function AdminLayout({ children, activeTab, onTabChange, onLogout, productCount, categoryCount, lowStockCount, orderCount, announcementCount, light }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const sidebar   = light ? 'bg-white border-r border-gray-200'          : 'bg-slate-900 border-r border-white/5'
@@ -75,6 +77,9 @@ export default function AdminLayout({ children, activeTab, onTabChange, onLogout
               )}
               {id === 'history' && orderCount > 0 && (
                 <span className="ml-auto bg-amber-500/20 text-amber-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{orderCount}</span>
+              )}
+              {id === 'announcements' && announcementCount > 0 && (
+                <span className="ml-auto bg-blue-500/20 text-blue-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{announcementCount}</span>
               )}
             </button>
           ))}

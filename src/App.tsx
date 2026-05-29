@@ -2,40 +2,47 @@ import { useState, useEffect, useRef } from 'react'
 import { Search, X, PartyPopper } from 'lucide-react'
 import type { CartItem, Product } from './types'
 import { useStore } from './store'
-import Header         from './components/Header'
-import CategoryFilter from './components/CategoryFilter'
-import ProductCard    from './components/ProductCard'
-import CartSidebar    from './components/CartSidebar'
-import Footer         from './components/Footer'
-import BottomNav      from './components/BottomNav'
-import SettingsPanel  from './components/SettingsPanel'
-import StoreLocator   from './components/StoreLocator'
-import BarcodeScanner from './components/BarcodeScanner'
-import ScanResult     from './components/ScanResult'
-import LoginPage      from './admin/LoginPage'
-import AdminPanel     from './admin/AdminPanel'
+import Header            from './components/Header'
+import CategoryFilter    from './components/CategoryFilter'
+import ProductCard       from './components/ProductCard'
+import CartSidebar       from './components/CartSidebar'
+import Footer            from './components/Footer'
+import BottomNav         from './components/BottomNav'
+import SettingsPanel     from './components/SettingsPanel'
+import StoreLocator      from './components/StoreLocator'
+import BarcodeScanner    from './components/BarcodeScanner'
+import ScanResult        from './components/ScanResult'
+import ActivityScreen    from './components/ActivityScreen'
+import NotificationsPanel from './components/NotificationsPanel'
+import Calculator        from './components/Calculator'
+import LoginPage         from './admin/LoginPage'
+import AdminPanel        from './admin/AdminPanel'
 
 export default function App() {
   const {
-    products, categories, orders,
+    products, categories, orders, announcements,
     addProduct, updateStock, removeProduct, updateProduct,
     addCategory, removeCategory, placeOrder,
+    addAnnouncement, removeAnnouncement,
   } = useStore()
 
-  const [cart,         setCart]         = useState<CartItem[]>([])
-  const [category,     setCategory]     = useState('All')
-  const [search,       setSearch]       = useState('')
-  const [cartOpen,     setCartOpen]     = useState(false)
-  const [orderPlaced,  setOrderPlaced]  = useState(false)
-  const [time,         setTime]         = useState(new Date())
-  const [adminMode,    setAdminMode]    = useState(false)
-  const [loggedIn,     setLoggedIn]     = useState(false)
-  const [light,        setLight]        = useState(false)
-  const [showScanner,  setShowScanner]  = useState(false)
-  const [scanResult,   setScanResult]   = useState<{ barcode: string; product: Product | null } | null>(null)
-  const [showSettings, setShowSettings] = useState(false)
-  const [showLocator,  setShowLocator]  = useState(false)
-  const [searchFocus,  setSearchFocus]  = useState(false)
+  const [cart,              setCart]              = useState<CartItem[]>([])
+  const [category,          setCategory]          = useState('All')
+  const [search,            setSearch]            = useState('')
+  const [cartOpen,          setCartOpen]          = useState(false)
+  const [orderPlaced,       setOrderPlaced]       = useState(false)
+  const [time,              setTime]              = useState(new Date())
+  const [adminMode,         setAdminMode]         = useState(false)
+  const [loggedIn,          setLoggedIn]          = useState(false)
+  const [light,             setLight]             = useState(false)
+  const [showScanner,       setShowScanner]       = useState(false)
+  const [scanResult,        setScanResult]        = useState<{ barcode: string; product: Product | null } | null>(null)
+  const [showSettings,      setShowSettings]      = useState(false)
+  const [showLocator,       setShowLocator]       = useState(false)
+  const [showActivity,      setShowActivity]      = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [showCalculator,    setShowCalculator]    = useState(false)
+  const [searchFocus,       setSearchFocus]       = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -47,11 +54,12 @@ export default function App() {
   const addToCart = (product: Product, qty: number = 1) =>
     setCart(prev => {
       const ex = prev.find(i => i.id === product.id)
-      if (ex) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + qty } : i)
-      return [...prev, { ...product, qty }]
+      if (ex) return prev.map(i => i.id === product.id ? { ...i, qty: Math.min(i.qty + qty, product.stock) } : i)
+      return [...prev, { ...product, qty: Math.min(qty, product.stock) }]
     })
 
-  const setQty         = (id: number, qty: number)   => setCart(prev => prev.map(i => i.id === id ? { ...i, qty } : i))
+  const setQty = (id: number, qty: number) =>
+    setCart(prev => prev.map(i => i.id === id ? { ...i, qty: Math.min(Math.max(qty, i.stockUnit === 'kg' ? 0.1 : 1), i.stock) } : i))
   const removeItem     = (id: number)                => setCart(prev => prev.filter(i => i.id !== id))
   const removeSelected = (ids: number[])             => setCart(prev => prev.filter(i => !ids.includes(i.id)))
   const clearCart      = ()                          => setCart([])
@@ -74,22 +82,22 @@ export default function App() {
     setScanResult({ barcode, product: products.find(p => p.barcode === barcode) ?? null })
   }
 
-  // ── Admin ─────────────────────────────────────────────────────────────────
-  if (adminMode) {
-    if (!loggedIn) return (
+  // ── Admin mode is rendered inside the main return to keep hooks stable
+  const adminContent = adminMode ? (
+    !loggedIn ? (
       <LoginPage onLogin={() => setLoggedIn(true)} onCancel={() => setAdminMode(false)} light={light} />
-    )
-    return (
+    ) : (
       <AdminPanel
-        products={products} categories={categories} orders={orders}
+        products={products} categories={categories} orders={orders} announcements={announcements}
         onAddProduct={addProduct} onUpdateStock={updateStock}
         onRemoveProduct={removeProduct} onUpdateProduct={updateProduct}
         onAddCategory={addCategory} onRemoveCategory={removeCategory}
+        onAddAnnouncement={addAnnouncement} onRemoveAnnouncement={removeAnnouncement}
         onExit={() => { setAdminMode(false); setLoggedIn(false) }}
         light={light}
       />
     )
-  }
+  ) : null
 
   // ── Store ─────────────────────────────────────────────────────────────────
   const allCats  = ['All', ...categories]
@@ -97,7 +105,12 @@ export default function App() {
 
   // Search: filter + scroll to first match
   const filtered = products.filter(p => {
-    const matchCat    = category === 'All' || p.category === category
+    const matchCat =
+      category === 'All'          ? true :
+      category === '__new'        ? !!p.isNew :
+      category === '__promo'      ? !!p.isPromo :
+      category === '__bestseller' ? !!p.isBestseller :
+      p.category === category
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
                         p.category.toLowerCase().includes(search.toLowerCase())
     return matchCat && matchSearch
@@ -118,7 +131,10 @@ export default function App() {
   const border = light ? 'border-gray-200' : 'border-slate-700/60'
 
   return (
-    <div className={`min-h-screen ${bg} pb-28 transition-colors duration-300`}>
+    <>
+      {adminContent}
+      {!adminContent && (
+        <div className={`min-h-screen ${bg} pb-28 transition-colors duration-300`}>
 
       {/* Toast */}
       {orderPlaced && (
@@ -193,7 +209,9 @@ export default function App() {
         <div className="mb-4">
           <span className={`${sub} text-xs`}>
             <span className={`${text} font-semibold`}>{filtered.length}</span> product{filtered.length !== 1 ? 's' : ''}
-            {category !== 'All' && <> in <span className="text-amber-500 font-semibold">{category}</span></>}
+            {category !== 'All' && <> in <span className="text-amber-500 font-semibold">{{
+              '__new': 'New Items', '__promo': 'Promos', '__bestseller': 'Bestsellers'
+            }[category] ?? category}</span></>}
             {search && <> · "<span className="text-amber-500 font-semibold">{search}</span>"</>}
           </span>
         </div>
@@ -229,8 +247,12 @@ export default function App() {
       {/* Bottom Nav */}
       <BottomNav
         totalQty={totalQty}
-        onCartOpen={() => setCartOpen(true)}
+        unreadNotifs={announcements.length}
+        light={light}
+        onActivity={() => setShowActivity(true)}
+        onNotifications={() => setShowNotifications(true)}
         onScan={() => setShowScanner(true)}
+        onCalculator={() => setShowCalculator(true)}
         onSettings={() => setShowSettings(true)}
       />
 
@@ -242,6 +264,7 @@ export default function App() {
           onOpenAdmin={() => { setShowSettings(false); setAdminMode(true) }}
           onClose={() => setShowSettings(false)}
           onOpenStoreLocator={() => { setShowSettings(false); setShowLocator(true) }}
+          onOpenHistory={() => setShowActivity(true)}
         />
       )}
 
@@ -264,6 +287,34 @@ export default function App() {
         />
       )}
 
+      {/* Activity screen */}
+      {showActivity && (
+        <ActivityScreen
+          cart={cart}
+          orders={orders}
+          light={light}
+          onClose={() => setShowActivity(false)}
+          onOpenCart={() => setCartOpen(true)}
+        />
+      )}
+
+      {/* Notifications panel */}
+      {showNotifications && (
+        <NotificationsPanel
+          announcements={announcements}
+          light={light}
+          onClose={() => setShowNotifications(false)}
+        />
+      )}
+
+      {/* Calculator */}
+      {showCalculator && (
+        <Calculator
+          light={light}
+          onClose={() => setShowCalculator(false)}
+        />
+      )}
+
       {/* Cart */}
       {cartOpen && (
         <CartSidebar
@@ -277,6 +328,8 @@ export default function App() {
           light={light}
         />
       )}
-    </div>
+        </div>
+      )}
+    </>
   )
 }

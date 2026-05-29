@@ -1,15 +1,17 @@
 import { useState, useCallback } from 'react'
 import { PRODUCTS as INITIAL_PRODUCTS, CATEGORIES as INITIAL_CATEGORIES } from './data'
-import type { Product, Order, CartItem } from './types'
+import type { Product, Order, CartItem, Announcement } from './types'
 
 const FREE_DELIVERY_AT = 1000
 let nextId = INITIAL_PRODUCTS.length + 1
 let nextOrderId = 1
+let nextAnnouncementId = 1
 
 export function useStore() {
-  const [products,   setProducts]   = useState<Product[]>(INITIAL_PRODUCTS)
-  const [categories, setCategories] = useState<string[]>(INITIAL_CATEGORIES.filter(c => c !== 'All'))
-  const [orders,     setOrders]     = useState<Order[]>([])
+  const [products,      setProducts]      = useState<Product[]>(INITIAL_PRODUCTS)
+  const [categories,    setCategories]    = useState<string[]>(INITIAL_CATEGORIES.filter(c => c !== 'All'))
+  const [orders,        setOrders]        = useState<Order[]>([])
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
 
   const addProduct    = useCallback((p: Omit<Product, 'id'>) => setProducts(prev => [...prev, { ...p, id: nextId++ }]), [])
   const updateStock   = useCallback((id: number, stock: number) => setProducts(prev => prev.map(p => p.id === id ? { ...p, stock } : p)), [])
@@ -39,5 +41,14 @@ export function useStore() {
     setOrders(prev => [order, ...prev])
   }, [])
 
-  return { products, categories, orders, addProduct, updateStock, removeProduct, addCategory, removeCategory, updateProduct, placeOrder }
+  const addAnnouncement    = useCallback((a: Omit<Announcement, 'id' | 'createdAt'>) =>
+    setAnnouncements(prev => [{ ...a, id: nextAnnouncementId++, createdAt: new Date().toISOString() }, ...prev]), [])
+  const removeAnnouncement = useCallback((id: number) =>
+    setAnnouncements(prev => prev.filter(a => a.id !== id)), [])
+
+  return {
+    products, categories, orders, announcements,
+    addProduct, updateStock, removeProduct, addCategory, removeCategory, updateProduct, placeOrder,
+    addAnnouncement, removeAnnouncement,
+  }
 }

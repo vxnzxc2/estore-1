@@ -6,7 +6,11 @@ export interface Product {
   image: string
   badge: string | null
   stock: number
+  stockUnit?: 'pcs' | 'kg'
   barcode?: string
+  isNew?: boolean
+  isPromo?: boolean
+  isBestseller?: boolean
 }
 
 export interface CartItem extends Product {
@@ -32,6 +36,13 @@ export interface Order {
   status: 'completed'
   method?: string
   fulfillment?: string
+}
+
+export interface Announcement {
+  id: number
+  title: string
+  message: string
+  createdAt: string
 }
 
 export type Category =

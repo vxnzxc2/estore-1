@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { Plus, Trash2, Edit3, Check, X, Search, ImageOff, ChevronDown, ChevronUp, Camera, Keyboard } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Plus, Trash2, Edit3, Check, X, Search, ImageOff, ChevronDown, ChevronUp, Barcode, Zap, Flame, Star } from 'lucide-react'
 import type { Product } from '../types'
 import Quagga from '@ericblade/quagga2'
 
@@ -14,80 +14,143 @@ interface Props {
   initialFilter?: string
 }
 
-const BLANK = { name: '', price: 0, category: '', image: '', badge: '', stock: 0, barcode: '' }
+const BLANK = { name: '', price: 0, category: '', image: '', badge: '', stock: 0, stockUnit: 'pcs' as 'pcs' | 'kg', barcode: '', isNew: false, isPromo: false, isBestseller: false }
+
+const HAS_NATIVE_DETECTOR = typeof window !== 'undefined' && 'BarcodeDetector' in window
 
 function BarcodePicker({ value, onChange, light }: { value: string; onChange: (v: string) => void; light?: boolean }) {
-  const [mode, setMode] = useState<'manual' | 'camera'>('manual')
+  const [active,   setActive]   = useState(false)
   const [scanning, setScanning] = useState(false)
-  const [error, setError] = useState('')
-  const scanRef = useRef<HTMLDivElement>(null)
+  const [error,    setError]    = useState('')
+  const scanRef   = useRef<HTMLDivElement>(null)
+  const videoRef  = useRef<HTMLVideoElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const rafRef    = useRef<number>(0)
 
-  const inp = light
-    ? 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-amber-400'
-    : 'bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-amber-500/60'
+  useEffect(() => {
+    if (!active) return
 
-  const startCamera = () => {
-    if (!scanRef.current) return
     setError('')
     setScanning(true)
-    Quagga.init({
-      inputStream: {
-        type: 'LiveStream',
-        target: scanRef.current,
-        constraints: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
-      },
-      decoder: { readers: ['ean_reader','ean_8_reader','code_128_reader','upc_reader','upc_e_reader'] },
-      locate: true,
-      numOfWorkers: 2,
-      frequency: 10,
-    }, (err) => {
-      if (err) { setError('Could not access camera.'); setScanning(false); return }
-      Quagga.start()
-    })
-    Quagga.onDetected((result) => {
-      const code = result?.codeResult?.code
-      if (code) {
-        onChange(code)
-        stopCamera()
-        setMode('manual')
-      }
-    })
-  }
 
-  const stopCamera = () => {
-    try { Quagga.stop() } catch (_) {}
-    setScanning(false)
+    if (HAS_NATIVE_DETECTOR) {
+      // ── Native BarcodeDetector ──────────────────────────────────────────
+      if (!scanRef.current) return
+      const vid = document.createElement('video')
+      vid.playsInline = true
+      vid.muted = true
+      vid.style.cssText = 'width:100%;height:100%;object-fit:cover;'
+      scanRef.current.appendChild(vid)
+      videoRef.current = vid
+
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
+      }).then(stream => {
+        streamRef.current = stream
+        vid.srcObject = stream
+        vid.play()
+
+        const detector = new (window as any).BarcodeDetector({
+          formats: ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e', 'code_39'],
+        })
+        const tick = async () => {
+          try {
+            const results = await detector.detect(vid)
+            if (results.length > 0) { onChange(results[0].rawValue); setActive(false); return }
+          } catch (_) {}
+          rafRef.current = requestAnimationFrame(tick)
+        }
+        rafRef.current = requestAnimationFrame(tick)
+      }).catch(err => {
+        setError(pickerError(err))
+        setScanning(false)
+      })
+
+      return () => {
+        cancelAnimationFrame(rafRef.current)
+        streamRef.current?.getTracks().forEach(t => t.stop())
+        streamRef.current = null
+        vid.remove()
+        setScanning(false)
+      }
+    } else {
+      // ── Quagga fallback ─────────────────────────────────────────────────
+      if (!scanRef.current) return
+
+      const handler = (result: any) => {
+        const code = result?.codeResult?.code
+        if (code) { onChange(code); setActive(false) }
+      }
+
+      const tryInit = (useFacingEnv: boolean) => {
+        const constraints: any = { width: { ideal: 640 }, height: { ideal: 480 } }
+        if (useFacingEnv) constraints.facingMode = 'environment'
+
+        try {
+          Quagga.init({
+            inputStream: { type: 'LiveStream', target: scanRef.current!, constraints },
+            decoder: { readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'upc_reader', 'upc_e_reader'] },
+            locate: true,
+            numOfWorkers: 0,
+            frequency: 10,
+          }, (err) => {
+            if (err) {
+              if (useFacingEnv) { tryInit(false); return }
+              setError(pickerError(err)); setScanning(false); return
+            }
+            Quagga.start()
+          })
+          Quagga.onDetected(handler)
+        } catch (e) {
+          setError(pickerError(e)); setScanning(false)
+        }
+      }
+
+      tryInit(true)
+
+      return () => {
+        try { Quagga.offDetected(handler) } catch (_) {}
+        try { Quagga.stop() } catch (_) {}
+        setScanning(false)
+      }
+    }
+  }, [active])
+
+  function pickerError(err: any): string {
+    const name = err?.name ?? String(err)
+    if (name === 'NotAllowedError' || String(err).toLowerCase().includes('permission'))
+      return 'Camera permission denied.'
+    if (name === 'NotFoundError') return 'No camera found.'
+    if (name === 'NotReadableError') return 'Camera in use by another app.'
+    return 'Camera unavailable.'
   }
 
   return (
     <div className="space-y-2">
-      {/* Mode toggle */}
-      <div className="flex gap-1">
-        <button type="button" onClick={() => { setMode('manual'); stopCamera() }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-            mode === 'manual'
-              ? 'bg-amber-500 text-white'
-              : light ? 'bg-gray-100 text-gray-500 hover:bg-gray-200' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-          }`}>
-          <Keyboard size={12} strokeWidth={2} /> Manual
-        </button>
-        <button type="button" onClick={() => { setMode('camera'); startCamera() }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-            mode === 'camera'
-              ? 'bg-amber-500 text-white'
-              : light ? 'bg-gray-100 text-gray-500 hover:bg-gray-200' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-          }`}>
-          <Camera size={12} strokeWidth={2} /> Camera
-        </button>
-      </div>
-
-      {mode === 'manual' && (
-        <input type="text" placeholder="e.g. 4800888036929" value={value}
-          onChange={e => onChange(e.target.value)}
-          className={`w-full border rounded-xl px-3 py-2 text-sm outline-none transition-colors ${inp}`} />
-      )}
-
-      {mode === 'camera' && (
+      {!active ? (
+        /* Idle — show current value (if any) + scan button */
+        <div className="space-y-2">
+          {value && (
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${light ? 'bg-green-50' : 'bg-green-500/10'}`}>
+              <Check size={13} className="text-green-500" strokeWidth={3} />
+              <p className={`flex-1 text-xs font-mono font-bold ${light ? 'text-green-700' : 'text-green-400'}`}>{value}</p>
+              <button type="button" onClick={() => onChange('')} className="text-red-400 hover:text-red-500 transition-colors">
+                <X size={13} strokeWidth={2.5} />
+              </button>
+            </div>
+          )}
+          <button type="button" onClick={() => setActive(true)}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed text-sm font-medium transition-colors ${
+              light
+                ? 'border-gray-300 text-gray-500 hover:border-amber-400 hover:text-amber-500'
+                : 'border-slate-600 text-slate-400 hover:border-amber-500/60 hover:text-amber-400'
+            }`}>
+            <Barcode size={16} strokeWidth={2} />
+            {value ? 'Re-scan Barcode' : 'Scan Barcode'}
+          </button>
+        </div>
+      ) : (
+        /* Active camera view */
         <div className="space-y-2">
           <div className={`relative rounded-xl overflow-hidden ${light ? 'bg-gray-100' : 'bg-slate-900'}`} style={{ height: 160 }}>
             <div ref={scanRef} className="w-full h-full" style={{ position: 'relative', overflow: 'hidden' }} />
@@ -112,15 +175,9 @@ function BarcodePicker({ value, onChange, light }: { value: string; onChange: (v
               </div>
             )}
           </div>
-          {value && (
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${light ? 'bg-green-50' : 'bg-green-500/10'}`}>
-              <Check size={13} className="text-green-500" strokeWidth={3} />
-              <p className={`text-xs font-mono font-bold ${light ? 'text-green-700' : 'text-green-400'}`}>{value}</p>
-            </div>
-          )}
-          <button type="button" onClick={stopCamera}
+          <button type="button" onClick={() => setActive(false)}
             className={`w-full text-xs py-2 rounded-lg transition-colors ${light ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
-            Cancel Camera
+            Cancel
           </button>
         </div>
       )}
@@ -174,13 +231,13 @@ export default function ProductsTab({ products, categories, onAdd, onUpdateStock
 
   const handleAdd = () => {
     if (!form.name || !form.category || form.price <= 0) return
-    onAdd({ ...form, price: Number(form.price), stock: Number(form.stock), badge: form.badge || null, barcode: form.barcode || undefined })
+    onAdd({ ...form, price: Number(form.price), stock: Number(form.stock), badge: form.badge || null, barcode: form.barcode || undefined, stockUnit: form.stockUnit })
     setForm(BLANK); setShowForm(false)
   }
 
   const startEdit = (p: Product) => {
     setEditProduct(p.id)
-    setEditForm({ name: p.name, price: p.price, category: p.category, image: p.image, badge: p.badge || '', stock: p.stock, barcode: p.barcode || '' })
+    setEditForm({ name: p.name, price: p.price, category: p.category, image: p.image, badge: p.badge || '', stock: p.stock, stockUnit: p.stockUnit || 'pcs', barcode: p.barcode || '', isNew: p.isNew, isPromo: p.isPromo, isBestseller: p.isBestseller })
   }
 
   const saveEdit = (id: number) => {
@@ -229,7 +286,6 @@ export default function ProductsTab({ products, categories, onAdd, onUpdateStock
               {[
                 { key: 'name',  label: 'Product Name *', placeholder: 'e.g. Chippy BBQ', type: 'text'   },
                 { key: 'price', label: 'Price (₱) *',    placeholder: '0',               type: 'number' },
-                { key: 'stock', label: 'Stock *',         placeholder: '0',               type: 'number' },
                 { key: 'badge', label: 'Badge',           placeholder: 'e.g. Bestseller!',type: 'text'   },
                 { key: 'image', label: 'Image URL',       placeholder: 'https://...',     type: 'text', full: true },
               ].map(({ key, label: lbl2, placeholder, type, full }) => (
@@ -240,6 +296,34 @@ export default function ProductsTab({ products, categories, onAdd, onUpdateStock
                     className={`w-full border rounded-xl px-3 py-2 text-sm outline-none transition-colors ${inp}`} />
                 </div>
               ))}
+              {/* Stock + unit picker */}
+              <div className="sm:col-span-2">
+                <label className={`text-xs ${lbl} mb-1 block`}>Stock *</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="number" min="0"
+                    step={form.stockUnit === 'kg' ? '0.01' : '1'}
+                    placeholder={form.stockUnit === 'kg' ? '0.00' : '0'}
+                    value={form.stock || ''}
+                    onChange={e => setForm(f => ({ ...f, stock: form.stockUnit === 'kg' ? parseFloat(e.target.value) || 0 : parseInt(e.target.value) || 0 }))}
+                    className={`flex-1 border rounded-xl px-3 py-2 text-sm outline-none transition-colors ${inp}`} />
+                  <div className="flex rounded-xl overflow-hidden border shrink-0 ${light ? 'border-gray-300' : 'border-slate-600'}">
+                    {(['pcs', 'kg'] as const).map(u => (
+                      <button key={u} type="button" onClick={() => setForm(f => ({ ...f, stockUnit: u }))}
+                        className={`px-3 py-2 text-xs font-semibold transition-colors ${
+                          form.stockUnit === u
+                            ? 'bg-amber-500 text-white'
+                            : light ? 'bg-white text-gray-500 hover:bg-gray-50' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                        }`}>
+                        {u === 'pcs' ? 'Pieces' : 'Kilos (kg)'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {form.stockUnit === 'kg' && (
+                  <p className={`text-[10px] ${sub} mt-1`}>Enter weight in kilograms (e.g. 5.5 for 5.5 kg)</p>
+                )}
+              </div>
               <div>
                 <label className={`text-xs ${lbl} mb-1 block`}>Category *</label>
                 <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
@@ -253,6 +337,26 @@ export default function ProductsTab({ products, categories, onAdd, onUpdateStock
                 <BarcodePicker value={form.barcode} onChange={v => setForm(f => ({ ...f, barcode: v }))} light={light} />
               </div>
             </div>
+
+            {/* Tag toggles */}
+            <div>
+              <p className={`text-xs ${lbl} mb-2`}>Featured Tags</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'isNew',        label: 'New Item',    icon: <Zap   size={12} strokeWidth={2.5} />, activeClass: 'bg-green-500 text-white', inactiveClass: light ? 'border-gray-200 text-gray-500 hover:border-green-400 hover:text-green-600' : 'border-slate-600 text-slate-400 hover:border-green-500/60 hover:text-green-400' },
+                  { key: 'isPromo',      label: 'Promo',       icon: <Flame size={12} strokeWidth={2.5} />, activeClass: 'bg-red-500 text-white',   inactiveClass: light ? 'border-gray-200 text-gray-500 hover:border-red-400 hover:text-red-500'    : 'border-slate-600 text-slate-400 hover:border-red-500/60 hover:text-red-400'   },
+                  { key: 'isBestseller', label: 'Bestseller',  icon: <Star  size={12} strokeWidth={2.5} fill="currentColor" />, activeClass: 'bg-yellow-500 text-white', inactiveClass: light ? 'border-gray-200 text-gray-500 hover:border-yellow-400 hover:text-yellow-600' : 'border-slate-600 text-slate-400 hover:border-yellow-500/60 hover:text-yellow-400' },
+                ].map(t => (
+                  <button key={t.key} type="button"
+                    onClick={() => setForm(f => ({ ...f, [t.key]: !(f as any)[t.key] }))}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${(form as any)[t.key] ? t.activeClass : `${light ? 'bg-white' : 'bg-slate-900'} border ${t.inactiveClass}`}`}>
+                    {t.icon} {t.label}
+                    {(form as any)[t.key] && <Check size={10} strokeWidth={3} className="ml-0.5" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="flex gap-2 pt-1">
               <button onClick={handleAdd} className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
                 <Check size={14} strokeWidth={3} /> Save
@@ -373,17 +477,40 @@ export default function ProductsTab({ products, categories, onAdd, onUpdateStock
                             {[
                               { key: 'name',  label: 'Name'      },
                               { key: 'price', label: 'Price (₱)' },
-                              { key: 'stock', label: 'Stock'     },
                               { key: 'badge', label: 'Badge'     },
                             ].map(({ key, label: lbl2 }) => (
                               <div key={key}>
                                 <label className={`text-xs ${lbl} mb-1 block`}>{lbl2}</label>
-                                <input type={key === 'price' || key === 'stock' ? 'number' : 'text'}
+                                <input type={key === 'price' ? 'number' : 'text'}
                                   value={(editForm as any)[key] ?? ''}
                                   onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))}
                                   className={`w-full border rounded-xl px-3 py-2 text-sm outline-none transition-colors ${inp}`} />
                               </div>
                             ))}
+                            {/* Stock + unit picker */}
+                            <div className="col-span-2 sm:col-span-3">
+                              <label className={`text-xs ${lbl} mb-1 block`}>Stock</label>
+                              <div className="flex gap-2 items-center">
+                                <input
+                                  type="number" min="0"
+                                  step={(editForm.stockUnit || 'pcs') === 'kg' ? '0.01' : '1'}
+                                  value={editForm.stock ?? ''}
+                                  onChange={e => setEditForm(f => ({ ...f, stock: (f.stockUnit || 'pcs') === 'kg' ? parseFloat(e.target.value) || 0 : parseInt(e.target.value) || 0 }))}
+                                  className={`flex-1 border rounded-xl px-3 py-2 text-sm outline-none transition-colors ${inp}`} />
+                                <div className={`flex rounded-xl overflow-hidden border shrink-0 ${light ? 'border-gray-300' : 'border-slate-600'}`}>
+                                  {(['pcs', 'kg'] as const).map(u => (
+                                    <button key={u} type="button" onClick={() => setEditForm(f => ({ ...f, stockUnit: u }))}
+                                      className={`px-3 py-2 text-xs font-semibold transition-colors ${
+                                        (editForm.stockUnit || 'pcs') === u
+                                          ? 'bg-amber-500 text-white'
+                                          : light ? 'bg-white text-gray-500 hover:bg-gray-50' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                                      }`}>
+                                      {u === 'pcs' ? 'Pieces' : 'Kilos (kg)'}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
                             <div>
                               <label className={`text-xs ${lbl} mb-1 block`}>Category</label>
                               <select value={editForm.category || ''} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))}
@@ -405,6 +532,26 @@ export default function ProductsTab({ products, categories, onAdd, onUpdateStock
                               />
                             </div>
                           </div>
+
+                          {/* Tag toggles */}
+                          <div>
+                            <p className={`text-xs ${lbl} mb-2`}>Featured Tags</p>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { key: 'isNew',        label: 'New Item',   icon: <Zap   size={12} strokeWidth={2.5} />, activeClass: 'bg-green-500 text-white',  inactiveClass: light ? 'border-gray-200 text-gray-500 hover:border-green-400 hover:text-green-600' : 'border-slate-600 text-slate-400 hover:border-green-500/60 hover:text-green-400' },
+                                { key: 'isPromo',      label: 'Promo',      icon: <Flame size={12} strokeWidth={2.5} />, activeClass: 'bg-red-500 text-white',    inactiveClass: light ? 'border-gray-200 text-gray-500 hover:border-red-400 hover:text-red-500'    : 'border-slate-600 text-slate-400 hover:border-red-500/60 hover:text-red-400'   },
+                                { key: 'isBestseller', label: 'Bestseller', icon: <Star  size={12} strokeWidth={2.5} fill="currentColor" />, activeClass: 'bg-yellow-500 text-white', inactiveClass: light ? 'border-gray-200 text-gray-500 hover:border-yellow-400 hover:text-yellow-600' : 'border-slate-600 text-slate-400 hover:border-yellow-500/60 hover:text-yellow-400' },
+                              ].map(t => (
+                                <button key={t.key} type="button"
+                                  onClick={() => setEditForm(f => ({ ...f, [t.key]: !(f as any)[t.key] }))}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${(editForm as any)[t.key] ? t.activeClass : `${light ? 'bg-white' : 'bg-slate-900'} border ${t.inactiveClass}`}`}>
+                                  {t.icon} {t.label}
+                                  {(editForm as any)[t.key] && <Check size={10} strokeWidth={3} className="ml-0.5" />}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
                           <div className="flex gap-2">
                             <button onClick={() => saveEdit(p.id)}
                               className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
