@@ -59,7 +59,20 @@ export default function App() {
     })
 
   const setQty = (id: number, qty: number) =>
-    setCart(prev => prev.map(i => i.id === id ? { ...i, qty: Math.min(Math.max(qty, i.stockUnit === 'kg' ? 0.1 : 1), i.stock) } : i))
+    setCart(prev => {
+      const existing = prev.find(i => i.id === id)
+      if (existing) {
+        return prev.map(i => i.id === id
+          ? { ...i, qty: Math.min(Math.max(qty, i.stockUnit === 'kg' ? 0.1 : 1), i.stock) }
+          : i
+        )
+      }
+
+      const product = products.find(p => p.id === id)
+      if (!product || qty <= 0) return prev
+
+      return [...prev, { ...product, qty: Math.min(Math.max(qty, product.stockUnit === 'kg' ? 0.1 : 1), product.stock) }]
+    })
   const removeItem     = (id: number)                => setCart(prev => prev.filter(i => i.id !== id))
   const removeSelected = (ids: number[])             => setCart(prev => prev.filter(i => !ids.includes(i.id)))
   const clearCart      = ()                          => setCart([])

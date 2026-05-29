@@ -90,9 +90,8 @@ export default function Calculator({ light, onClose }: Props) {
   const ROWS = [
     [
       { label: 'AC', action: handleClear,   cls: clrBtn },
-      { label: '+/-', action: handleNegate,  cls: numBtn },
+      { label: 'CE', action: () => { setDisplay('0'); setReset(false) }, cls: clrBtn },
       { label: '%',  action: handlePercent, cls: numBtn },
-      { label: '÷',  action: () => applyOp('÷'), cls: opBtn, active: op === '÷' },
     ],
     [
       { label: '7', action: () => pushDigit('7'), cls: numBtn },
