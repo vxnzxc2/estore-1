@@ -1,3 +1,21 @@
+export interface FeaturedTag {
+  id: string
+  label: string
+  icon: string
+}
+
+export type MembershipPlan = 'Free' | 'Pro' | 'Max'
+
+export interface UserProfile {
+  id: string
+  name: string
+  email: string
+  phone: string
+  membership: MembershipPlan
+  walletBalance: number
+  points: number
+}
+
 export interface Product {
   id: number
   name: string
@@ -9,8 +27,12 @@ export interface Product {
   stockUnit?: 'pcs' | 'kg'
   barcode?: string
   isNew?: boolean
+  isNewIcon?: string
   isPromo?: boolean
+  isPromoIcon?: string
   isBestseller?: boolean
+  isBestsellerIcon?: string
+  featuredTags?: FeaturedTag[]
 }
 
 export interface CartItem extends Product {
@@ -33,9 +55,10 @@ export interface Order {
   deliveryFee: number
   grandTotal: number
   placedAt: string
-  status: 'completed'
+  status: 'completed' | 'cancelled'
   method?: string
   fulfillment?: string
+  payLaterTerm?: number
 }
 
 export interface Announcement {

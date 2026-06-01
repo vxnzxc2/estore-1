@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ShoppingCart, TriangleAlert, ImageOff, Plus, Minus, Zap, Star, Tag, X } from 'lucide-react'
+import * as LucideIcons from 'lucide-react'
+import { ShoppingCart, TriangleAlert, ImageOff, Plus, Minus, Zap, X } from 'lucide-react'
 import type { Product } from '../types'
 
 interface Props {
@@ -38,6 +39,22 @@ export default function ProductCard({
 
   const clamp = (q: number) =>
     parseFloat(Math.min(Math.max(q, MIN), Math.max(remaining, MIN)).toFixed(2))
+
+  const normalizeLucideIcon = (name: string) => {
+    if (!name) return 'Zap'
+    if (LucideIcons[name as keyof typeof LucideIcons]) return name
+    const normalized = name
+      .split(/[-_\s]+/)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join('')
+    return LucideIcons[normalized as keyof typeof LucideIcons] ? normalized : 'Zap'
+  }
+
+  const renderLucideIcon = (name: string, props: any = {}) => {
+    const normalized = normalizeLucideIcon(name)
+    const Icon = LucideIcons[normalized as keyof typeof LucideIcons] as any
+    return Icon ? <Icon {...props} /> : <Zap {...props} />
+  }
 
   // ── Spinner +/- on the card ───────────────────────────────────────────────
   const spinnerInc = () => {
@@ -187,19 +204,32 @@ export default function ProductCard({
           )}
           {product.isBestseller && (
             <span className="bg-yellow-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-0.5 shadow-md">
-              <Star size={8} strokeWidth={3} fill="white" /> Best
+              {renderLucideIcon(product.isBestsellerIcon || 'Star', { size: 8, strokeWidth: 2.5, className: 'text-white' })}
+              Best
             </span>
           )}
           {product.isPromo && (
             <span className="bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-0.5 shadow-md">
-              <Tag size={8} strokeWidth={3} /> Promo
+              {renderLucideIcon(product.isPromoIcon || 'Flame', { size: 8, strokeWidth: 2.5, className: 'text-white' })}
+              Promo
             </span>
           )}
           {product.isNew && (
-            <span className="bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-lg shadow-md">
+            <span className="bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-0.5 shadow-md">
+              {renderLucideIcon(product.isNewIcon || 'Zap', { size: 8, strokeWidth: 2.5, className: 'text-white' })}
               New!
             </span>
           )}
+          {product.featuredTags?.length ? (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {(product.featuredTags || []).map(tag => (
+                <span key={tag.id} className="bg-slate-900 text-white text-[9px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-md">
+                  {renderLucideIcon(tag.icon, { size: 8, strokeWidth: 2.5, className: 'text-white' })}
+                  {tag.label}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         {/* Cart qty pill top-right */}

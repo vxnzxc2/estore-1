@@ -8,6 +8,7 @@ interface Props {
   light?: boolean
   onClose: () => void
   onOpenCart: () => void
+  onCancelOrder: (id: string) => void
 }
 
 const METHOD_ICON: Record<string, React.ReactNode> = {
@@ -36,13 +37,17 @@ function CartThumb({ item, light, sub }: { item: CartItem; light?: boolean; sub:
   )
 }
 
-function OrderRow({ order, light }: { order: Order; light?: boolean }) {
+function OrderRow({ order, light, onRequestCancelOrder }: { order: Order; light?: boolean; onRequestCancelOrder: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false)
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set())
   const sub   = light ? 'text-gray-400' : 'text-slate-400'
   const title = light ? 'text-gray-900' : 'text-white'
   const sepB  = light ? 'border-gray-100' : 'border-white/5'
   const date  = new Date(order.placedAt)
+
+  const statusStyles = order.status === 'cancelled'
+    ? 'bg-red-500/10 text-red-400 border-red-500/15'
+    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
 
   return (
     <div className={`border-b ${sepB} last:border-0`}>
@@ -62,6 +67,9 @@ function OrderRow({ order, light }: { order: Order; light?: boolean }) {
             {order.method && (
               <span className={`flex items-center gap-0.5 text-[10px] ${sub}`}>
                 {METHOD_ICON[order.method] ?? null}
+                <span className="capitalize">
+                  {order.method === 'later' && order.payLaterTerm ? `later · ${order.payLaterTerm}m` : order.method}
+                </span>
               </span>
             )}
             {order.fulfillment && (
@@ -70,6 +78,9 @@ function OrderRow({ order, light }: { order: Order; light?: boolean }) {
                 <span className="ml-0.5 capitalize">{order.fulfillment}</span>
               </span>
             )}
+            <span className={`flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-md border ${statusStyles}`}>
+              {order.status === 'cancelled' ? 'Cancelled' : 'Completed'}
+            </span>
           </div>
         </div>
         <div className="text-right shrink-0">
@@ -101,14 +112,23 @@ function OrderRow({ order, light }: { order: Order; light?: boolean }) {
             <span className={title}>Total</span>
             <span className="text-amber-500">₱{order.grandTotal}</span>
           </div>
+          {order.status !== 'cancelled' && (
+            <div className="mt-3">
+              <button onClick={() => onRequestCancelOrder(order.id)}
+                className="w-full rounded-2xl bg-red-500/10 text-red-500 border border-red-500/15 py-2 text-sm font-semibold hover:bg-red-500/15 transition-colors">
+                Cancel order
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
   )
 }
 
-export default function ActivityScreen({ cart, orders, light, onClose, onOpenCart }: Props) {
+export default function ActivityScreen({ cart, orders, light, onClose, onOpenCart, onCancelOrder }: Props) {
   const [tab, setTab] = useState<'history' | 'pending'>('history')
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null)
 
   const bg      = light ? 'bg-white'        : 'bg-[#0d1424]'
   const overlay = light ? 'bg-black/20'     : 'bg-black/60'
@@ -169,7 +189,7 @@ export default function ActivityScreen({ cart, orders, light, onClose, onOpenCar
             ) : (
               <div className={`${card} mx-4 my-4 rounded-2xl overflow-hidden`}>
                 {orders.map(order => (
-                  <OrderRow key={order.id} order={order} light={light} />
+                  <OrderRow key={order.id} order={order} light={light} onRequestCancelOrder={setCancelOrderId} />
                 ))}
               </div>
             )
@@ -212,6 +232,33 @@ export default function ActivityScreen({ cart, orders, light, onClose, onOpenCar
             )
           )}
         </div>
+
+        {cancelOrderId && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setCancelOrderId(null)} />
+            <div className={`relative w-full max-w-sm rounded-[28px] border px-5 py-5 shadow-2xl ${light ? 'bg-white border-gray-200' : 'bg-slate-950/95 border-white/10'}`}>
+              <p className={`text-base font-semibold ${light ? 'text-gray-900' : 'text-white'}`}>Cancel order?</p>
+              <p className={`mt-2 text-sm leading-6 ${light ? 'text-gray-500' : 'text-slate-400'}`}>
+                Are you sure you want to cancel this order? This action cannot be undone.
+              </p>
+              <div className="mt-5 flex gap-3">
+                <button onClick={() => setCancelOrderId(null)}
+                  className={`flex-1 rounded-2xl border ${light ? 'border-slate-200/75 text-slate-700 hover:bg-slate-100' : 'border-slate-700/75 text-slate-200 hover:bg-slate-800'} bg-transparent py-3 text-sm font-semibold transition-colors`}>
+                  Keep order
+                </button>
+                <button onClick={() => {
+                    if (cancelOrderId) {
+                      onCancelOrder(cancelOrderId)
+                      setCancelOrderId(null)
+                    }
+                  }}
+                  className="flex-1 rounded-2xl bg-red-500 py-3 text-sm font-semibold text-white hover:bg-red-600 transition-colors">
+                  Yes, cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

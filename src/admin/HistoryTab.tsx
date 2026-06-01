@@ -59,7 +59,6 @@ export default function HistoryTab({ orders, light }: Props) {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
 
   const bg    = light ? 'bg-white border border-gray-200 shadow-sm' : 'bg-slate-800/60 border border-white/5'
-  const bg2   = light ? 'bg-gray-50'   : 'bg-slate-900/40'
   const title = light ? 'text-gray-900' : 'text-white'
   const sub   = light ? 'text-gray-400' : 'text-slate-400'
   const rowH  = light ? 'hover:bg-gray-50' : 'hover:bg-slate-700/20'
@@ -189,7 +188,12 @@ export default function HistoryTab({ orders, light }: Props) {
                                 <Clock size={10} strokeWidth={2} />
                                 {orderDate.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})}
                                 {' · '}{orderDate.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'})}
-                                {order.method && <span className="flex items-center gap-0.5 ml-1">{METHOD_ICON[order.method]} {order.method}</span>}
+                                {order.method && (
+                                  <span className="flex items-center gap-0.5 ml-1">
+                                    {METHOD_ICON[order.method]}
+                                    {order.method === 'later' && order.payLaterTerm ? `later · ${order.payLaterTerm}m` : order.method}
+                                  </span>
+                                )}
                                 {order.fulfillment && (
                                   <span className={`flex items-center gap-0.5 ${light?'bg-gray-100 text-gray-500':'bg-slate-700 text-slate-400'} px-1.5 py-0.5 rounded-md`}>
                                     {order.fulfillment==='pickup' ? <Store size={9} strokeWidth={2} /> : <Truck size={9} strokeWidth={2} />}

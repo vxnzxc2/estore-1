@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Trash2, Edit3, Check, X, Search, ImageOff, ChevronDown, ChevronUp, Barcode, Zap, Flame, Star } from 'lucide-react'
-import type { Product } from '../types'
+import * as LucideIcons from 'lucide-react'
+import { Plus, Trash2, Edit3, Check, X, Search, ImageOff, ChevronDown, ChevronUp, Barcode, Zap } from 'lucide-react'
+import type { Product, FeaturedTag } from '../types'
 import Quagga from '@ericblade/quagga2'
 
 interface Props {
@@ -14,7 +15,42 @@ interface Props {
   initialFilter?: string
 }
 
-const BLANK = { name: '', price: 0, category: '', image: '', badge: '', stock: 0, stockUnit: 'pcs' as 'pcs' | 'kg', barcode: '', isNew: false, isPromo: false, isBestseller: false }
+const BLANK = {
+  name: '', price: 0, category: '', image: '', badge: '', stock: 0,
+  stockUnit: 'pcs' as 'pcs' | 'kg', barcode: '',
+  isNew: false, isPromo: false, isBestseller: false,
+  isNewIcon: 'Zap',
+  isPromoIcon: 'Flame',
+  isBestsellerIcon: 'Star',
+  featuredTags: [] as FeaturedTag[],
+}
+
+const FEATURE_TAGS = [
+  { key: 'isNew', label: 'New Item' },
+  { key: 'isPromo', label: 'Promo' },
+  { key: 'isBestseller', label: 'Bestseller' },
+]
+
+const ICON_OPTIONS = Object.keys(LucideIcons)
+  .filter(name => /^[A-Z][A-Za-z0-9]+$/.test(name))
+  .sort((a, b) => a.localeCompare(b))
+  .map(name => ({ id: name, label: name }))
+
+const normalizeLucideIcon = (name: string) => {
+  if (!name) return 'Zap'
+  if (LucideIcons[name as keyof typeof LucideIcons]) return name
+  const normalized = name
+    .split(/[-_\s]+/)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join('')
+  return LucideIcons[normalized as keyof typeof LucideIcons] ? normalized : 'Zap'
+}
+
+const renderLucideIcon = (name: string, props: any = {}) => {
+  const normalized = normalizeLucideIcon(name)
+  const Icon = LucideIcons[normalized as keyof typeof LucideIcons] as any
+  return Icon ? <Icon {...props} /> : <Zap {...props} />
+}
 
 const HAS_NATIVE_DETECTOR = typeof window !== 'undefined' && 'BarcodeDetector' in window
 
@@ -185,12 +221,20 @@ function BarcodePicker({ value, onChange, light }: { value: string; onChange: (v
   )
 }
 
-export default function ProductsTab({ products, categories, onAdd, onUpdateStock, onRemove, onUpdate, light, initialFilter }: Props) {
+export default function ProductsTab({ products, categories, onAdd, onRemove, onUpdate, light, initialFilter }: Props) {
   const [showForm,    setShowForm]    = useState(false)
   const [form,        setForm]        = useState(BLANK)
   const [editProduct, setEditProduct] = useState<number | null>(null)
   const [editForm,    setEditForm]    = useState<Partial<Product> & { badge?: string; barcode?: string }>({})
   const [search,      setSearch]      = useState('')
+  const [newTagLabel, setNewTagLabel] = useState('')
+  const [newTagIcon,  setNewTagIcon]  = useState<FeaturedTag['icon']>('Zap')
+  const [newTagIconSearch, setNewTagIconSearch] = useState('')
+  const [newTagIconOpen, setNewTagIconOpen] = useState(false)
+  const [editTagLabel, setEditTagLabel] = useState('')
+  const [editTagIcon,  setEditTagIcon]  = useState<FeaturedTag['icon']>('Zap')
+  const [editTagIconSearch, setEditTagIconSearch] = useState('')
+  const [editTagIconOpen, setEditTagIconOpen] = useState(false)
   const [stockFilter, setStockFilter] = useState(initialFilter || 'all')
   const [imgErrors,   setImgErrors]   = useState<Set<number>>(new Set())
   const [confirmDel,  setConfirmDel]  = useState<number | null>(null)
@@ -231,17 +275,59 @@ export default function ProductsTab({ products, categories, onAdd, onUpdateStock
 
   const handleAdd = () => {
     if (!form.name || !form.category || form.price <= 0) return
-    onAdd({ ...form, price: Number(form.price), stock: Number(form.stock), badge: form.badge || null, barcode: form.barcode || undefined, stockUnit: form.stockUnit })
-    setForm(BLANK); setShowForm(false)
+    onAdd({ ...form, price: Number(form.price), stock: Number(form.stock), badge: form.badge || null, barcode: form.barcode || undefined, stockUnit: form.stockUnit, featuredTags: form.featuredTags || [] })
+    setForm(BLANK); setNewTagLabel(''); setNewTagIcon('Zap'); setShowForm(false)
+  }
+
+  const addFeaturedTag = () => {
+    const label = newTagLabel.trim()
+    if (!label) return
+    const nextTag: FeaturedTag = {
+      id: `${label.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
+      label,
+      icon: newTagIcon,
+    }
+    setForm(f => ({ ...f, featuredTags: [...(f.featuredTags || []), nextTag] }))
+    setNewTagLabel('')
+    setNewTagIcon('Zap')
+  }
+
+  const addEditFeaturedTag = () => {
+    const label = editTagLabel.trim()
+    if (!label) return
+    const nextTag: FeaturedTag = {
+      id: `${label.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
+      label,
+      icon: editTagIcon,
+    }
+    setEditForm(f => ({ ...f, featuredTags: [...(f.featuredTags || []), nextTag] }))
+    setEditTagLabel('')
+    setEditTagIcon('Zap')
   }
 
   const startEdit = (p: Product) => {
     setEditProduct(p.id)
-    setEditForm({ name: p.name, price: p.price, category: p.category, image: p.image, badge: p.badge || '', stock: p.stock, stockUnit: p.stockUnit || 'pcs', barcode: p.barcode || '', isNew: p.isNew, isPromo: p.isPromo, isBestseller: p.isBestseller })
+    setEditForm({
+      name: p.name,
+      price: p.price,
+      category: p.category,
+      image: p.image,
+      badge: p.badge || '',
+      stock: p.stock,
+      stockUnit: p.stockUnit || 'pcs',
+      barcode: p.barcode || '',
+      isNew: p.isNew,
+      isPromo: p.isPromo,
+      isBestseller: p.isBestseller,
+      isNewIcon: p.isNewIcon || 'Zap',
+      isPromoIcon: p.isPromoIcon || 'Flame',
+      isBestsellerIcon: p.isBestsellerIcon || 'Star',
+      featuredTags: p.featuredTags || [],
+    })
   }
 
   const saveEdit = (id: number) => {
-    onUpdate(id, { ...editForm, badge: (editForm.badge as string) || null, price: Number(editForm.price), stock: Number(editForm.stock) })
+    onUpdate(id, { ...editForm, badge: (editForm.badge as string) || null, price: Number(editForm.price), stock: Number(editForm.stock), featuredTags: editForm.featuredTags || [] })
     setEditProduct(null)
   }
 
@@ -341,19 +427,71 @@ export default function ProductsTab({ products, categories, onAdd, onUpdateStock
             {/* Tag toggles */}
             <div>
               <p className={`text-xs ${lbl} mb-2`}>Featured Tags</p>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { key: 'isNew',        label: 'New Item',    icon: <Zap   size={12} strokeWidth={2.5} />, activeClass: 'bg-green-500 text-white', inactiveClass: light ? 'border-gray-200 text-gray-500 hover:border-green-400 hover:text-green-600' : 'border-slate-600 text-slate-400 hover:border-green-500/60 hover:text-green-400' },
-                  { key: 'isPromo',      label: 'Promo',       icon: <Flame size={12} strokeWidth={2.5} />, activeClass: 'bg-red-500 text-white',   inactiveClass: light ? 'border-gray-200 text-gray-500 hover:border-red-400 hover:text-red-500'    : 'border-slate-600 text-slate-400 hover:border-red-500/60 hover:text-red-400'   },
-                  { key: 'isBestseller', label: 'Bestseller',  icon: <Star  size={12} strokeWidth={2.5} fill="currentColor" />, activeClass: 'bg-yellow-500 text-white', inactiveClass: light ? 'border-gray-200 text-gray-500 hover:border-yellow-400 hover:text-yellow-600' : 'border-slate-600 text-slate-400 hover:border-yellow-500/60 hover:text-yellow-400' },
-                ].map(t => (
-                  <button key={t.key} type="button"
-                    onClick={() => setForm(f => ({ ...f, [t.key]: !(f as any)[t.key] }))}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${(form as any)[t.key] ? t.activeClass : `${light ? 'bg-white' : 'bg-slate-900'} border ${t.inactiveClass}`}`}>
-                    {t.icon} {t.label}
-                    {(form as any)[t.key] && <Check size={10} strokeWidth={3} className="ml-0.5" />}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {FEATURE_TAGS.map(tag => (
+                  <button key={tag.key} type="button"
+                    onClick={() => setForm(f => ({ ...f, [tag.key]: !(f as any)[tag.key] }))}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${(form as any)[tag.key] ? 'bg-amber-500 text-white' : `${light ? 'bg-white' : 'bg-slate-900'} border ${light ? 'border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-500' : 'border-slate-600 text-slate-400 hover:border-amber-500/60 hover:text-slate-400'}`}`}>
+                    {tag.label}
+                    {(form as any)[tag.key] && <Check size={10} strokeWidth={3} className="ml-0.5" />}
                   </button>
                 ))}
+              </div>
+              {form.featuredTags?.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Custom Tags</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(form.featuredTags || []).map((tag, idx) => (
+                      <button key={tag.id} type="button"
+                        onClick={() => setForm(f => ({ ...f, featuredTags: (f.featuredTags || []).filter((_, i) => i !== idx) }))}
+                        className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100">
+                        {renderLucideIcon(tag.icon, { size: 12, strokeWidth: 2.5 })}
+                        {tag.label}
+                        <X size={12} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className={`text-xs ${lbl} mb-1 block`}>Tag label</label>
+                  <input type="text" value={newTagLabel} onChange={e => setNewTagLabel(e.target.value)}
+                    className={`w-full border rounded-xl px-3 py-2 text-sm outline-none transition-colors ${inp}`} placeholder="e.g. Sale" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={`text-xs ${lbl} mb-1 block`}>Icon</label>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+                      <Search size={16} />
+                    </div>
+                    <input type="text" value={newTagIconSearch} onChange={e => { setNewTagIconSearch(e.target.value); setNewTagIconOpen(true) }}
+                      onFocus={() => setNewTagIconOpen(true)}
+                      placeholder="Search icon names…"
+                      className={`w-full border rounded-xl px-10 py-2 text-sm outline-none transition-colors ${inp}`} />
+                    {(newTagIconOpen || newTagIconSearch) && (
+                      <div className="absolute left-0 right-0 z-20 mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-72 overflow-y-auto rounded-2xl p-2 shadow-lg bg-slate-950 border border-slate-700 text-white">
+                        {ICON_OPTIONS.filter(opt => opt.id.toLowerCase().includes(newTagIconSearch.toLowerCase())).map(opt => (
+                          <button key={opt.id} type="button"
+                            onClick={() => { setNewTagIcon(opt.id); setNewTagIconOpen(false) }}
+                            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl border transition-colors ${newTagIcon === opt.id ? 'bg-amber-500 text-white border-amber-500' : 'bg-slate-900 text-slate-100 border-slate-700 hover:bg-slate-800'}`}>
+                            {renderLucideIcon(opt.id, { size: 16, strokeWidth: 2.5, className: 'text-white' })}
+                            <span className="text-[10px] text-center leading-tight text-slate-100">{opt.label}</span>
+                          </button>
+                        ))}
+                        {ICON_OPTIONS.filter(opt => opt.id.toLowerCase().includes(newTagIconSearch.toLowerCase())).length === 0 && (
+                          <div className="text-xs text-slate-400 px-3 py-2 col-span-full">No matching icons</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3">
+                <button type="button" onClick={addFeaturedTag}
+                  className="px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-400 transition-colors">
+                  Add featured tag
+                </button>
               </div>
             </div>
 
@@ -536,19 +674,71 @@ export default function ProductsTab({ products, categories, onAdd, onUpdateStock
                           {/* Tag toggles */}
                           <div>
                             <p className={`text-xs ${lbl} mb-2`}>Featured Tags</p>
-                            <div className="flex flex-wrap gap-2">
-                              {[
-                                { key: 'isNew',        label: 'New Item',   icon: <Zap   size={12} strokeWidth={2.5} />, activeClass: 'bg-green-500 text-white',  inactiveClass: light ? 'border-gray-200 text-gray-500 hover:border-green-400 hover:text-green-600' : 'border-slate-600 text-slate-400 hover:border-green-500/60 hover:text-green-400' },
-                                { key: 'isPromo',      label: 'Promo',      icon: <Flame size={12} strokeWidth={2.5} />, activeClass: 'bg-red-500 text-white',    inactiveClass: light ? 'border-gray-200 text-gray-500 hover:border-red-400 hover:text-red-500'    : 'border-slate-600 text-slate-400 hover:border-red-500/60 hover:text-red-400'   },
-                                { key: 'isBestseller', label: 'Bestseller', icon: <Star  size={12} strokeWidth={2.5} fill="currentColor" />, activeClass: 'bg-yellow-500 text-white', inactiveClass: light ? 'border-gray-200 text-gray-500 hover:border-yellow-400 hover:text-yellow-600' : 'border-slate-600 text-slate-400 hover:border-yellow-500/60 hover:text-yellow-400' },
-                              ].map(t => (
-                                <button key={t.key} type="button"
-                                  onClick={() => setEditForm(f => ({ ...f, [t.key]: !(f as any)[t.key] }))}
-                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${(editForm as any)[t.key] ? t.activeClass : `${light ? 'bg-white' : 'bg-slate-900'} border ${t.inactiveClass}`}`}>
-                                  {t.icon} {t.label}
-                                  {(editForm as any)[t.key] && <Check size={10} strokeWidth={3} className="ml-0.5" />}
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {FEATURE_TAGS.map(tag => (
+                                <button key={tag.key} type="button"
+                                  onClick={() => setEditForm(f => ({ ...f, [tag.key]: !(f as any)[tag.key] }))}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${(editForm as any)[tag.key] ? 'bg-amber-500 text-white' : `${light ? 'bg-white' : 'bg-slate-900'} border ${light ? 'border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-500' : 'border-slate-600 text-slate-400 hover:border-amber-500/60 hover:text-slate-400'}`}`}>
+                                  {tag.label}
+                                  {(editForm as any)[tag.key] && <Check size={10} strokeWidth={3} className="ml-0.5" />}
                                 </button>
                               ))}
+                            </div>
+                            {(editForm.featuredTags || []).length > 0 && (
+                              <div className="mb-3">
+                                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Custom Tags</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {(editForm.featuredTags || []).map((tag, idx) => (
+                                    <button key={tag.id} type="button"
+                                      onClick={() => setEditForm(f => ({ ...f, featuredTags: (f.featuredTags || []).filter((_, i) => i !== idx) }))}
+                                      className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100">
+                                      {renderLucideIcon(tag.icon, { size: 12, strokeWidth: 2.5 })}
+                                      {tag.label}
+                                      <X size={12} />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                              <div>
+                                <label className={`text-xs ${lbl} mb-1 block`}>Tag label</label>
+                                <input type="text" value={editTagLabel} onChange={e => setEditTagLabel(e.target.value)}
+                                  className={`w-full border rounded-xl px-3 py-2 text-sm outline-none transition-colors ${inp}`} placeholder="e.g. Sale" />
+                              </div>
+                              <div className="sm:col-span-2">
+                                <label className={`text-xs ${lbl} mb-1 block`}>Icon</label>
+                                <div className="relative">
+                                  <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+                                    <Search size={16} />
+                                  </div>
+                                  <input type="text" value={editTagIconSearch} onChange={e => { setEditTagIconSearch(e.target.value); setEditTagIconOpen(true) }}
+                                    onFocus={() => setEditTagIconOpen(true)}
+                                    placeholder="Search icon names…"
+                                    className={`w-full border rounded-xl px-10 py-2 text-sm outline-none transition-colors ${inp}`} />
+                                  {(editTagIconOpen || editTagIconSearch) && (
+                                    <div className="absolute left-0 right-0 z-20 mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-72 overflow-y-auto rounded-2xl p-2 shadow-lg bg-slate-950 border border-slate-700 text-white">
+                                      {ICON_OPTIONS.filter(opt => opt.id.toLowerCase().includes(editTagIconSearch.toLowerCase())).map(opt => (
+                                        <button key={opt.id} type="button"
+                                          onClick={() => { setEditTagIcon(opt.id); setEditTagIconOpen(false) }}
+                                          className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl border transition-colors ${editTagIcon === opt.id ? 'bg-amber-500 text-white border-amber-500' : 'bg-slate-900 text-slate-100 border-slate-700 hover:bg-slate-800'}`}>
+                                          {renderLucideIcon(opt.id, { size: 16, strokeWidth: 2.5, className: 'text-white' })}
+                                          <span className="text-[10px] text-center leading-tight text-slate-100">{opt.label}</span>
+                                        </button>
+                                      ))}
+                                      {ICON_OPTIONS.filter(opt => opt.id.toLowerCase().includes(editTagIconSearch.toLowerCase())).length === 0 && (
+                                        <div className="text-xs text-slate-400 px-3 py-2 col-span-full">No matching icons</div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mt-3">
+                              <button type="button" onClick={addEditFeaturedTag}
+                                className="px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-400 transition-colors">
+                                Add featured tag
+                              </button>
                             </div>
                           </div>
 

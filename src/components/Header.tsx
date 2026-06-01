@@ -4,10 +4,12 @@ interface Props {
   totalQty: number
   time: Date
   onCartOpen: () => void
+  onProfileOpen: () => void
+  user: { name: string; walletBalance: number; points: number }
   light?: boolean
 }
 
-export default function Header({ totalQty, time, onCartOpen, light }: Props) {
+export default function Header({ totalQty, time, onCartOpen, onProfileOpen, user, light }: Props) {
   const bg    = light ? 'bg-white border-b border-gray-200 shadow-sm' : 'bg-slate-900/95 border-b border-white/5'
   const title = light ? 'text-gray-900' : 'text-white'
   const sub   = light ? 'text-gray-400' : 'text-slate-500'
@@ -35,6 +37,17 @@ export default function Header({ totalQty, time, onCartOpen, light }: Props) {
             {time.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
+
+        <button onClick={onProfileOpen}
+          className={`flex items-center gap-2 px-3 py-2 rounded-2xl transition-colors ${light ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-slate-800/75 text-white hover:bg-slate-700'}`}>
+          <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-[11px] font-semibold text-white">
+            {user.name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase()}
+          </div>
+          <div className="text-left leading-none">
+            <p className="text-xs font-semibold">{user.name.split(' ')[0]}</p>
+            <p className="text-[10px] text-slate-300">₱{user.walletBalance.toFixed(2)} · {user.points} pts</p>
+          </div>
+        </button>
 
         <button onClick={onCartOpen}
           className={`btn-press relative flex items-center gap-1.5 ${btn} font-semibold text-xs px-3 py-2 rounded-xl transition-colors`}>

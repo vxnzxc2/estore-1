@@ -1,7 +1,11 @@
+import { useState } from 'react'
+import { CheckSquare, Square, ShoppingBag } from 'lucide-react'
+import type { CartItem as CartItemType } from '../types'
+
 // Replace the CartItemRow component inside src/components/CartSidebar.tsx
 // This is the full CartItemRow function only — paste it over the existing one
 
-function CartItemRow({ item, selected, onSelect, onQtyChange, light }: {
+export default function CartItemRow({ item, selected, onSelect, onQtyChange, light }: {
   item: CartItemType; selected: boolean; onSelect: () => void
   onQtyChange: (id: number, qty: number) => void; light?: boolean
 }) {

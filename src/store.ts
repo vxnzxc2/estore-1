@@ -24,7 +24,7 @@ export function useStore() {
   const updateProduct = useCallback((id: number, updates: Partial<Product>) =>
     setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p)), [])
 
-  const placeOrder = useCallback((cart: CartItem[], method: string, fulfillment: string) => {
+  const placeOrder = useCallback((cart: CartItem[], method: string, fulfillment: string, payLaterTerm?: number) => {
     const total       = cart.reduce((s, i) => s + i.price * i.qty, 0)
     const deliveryFee = fulfillment === 'pickup' ? 0 : total >= FREE_DELIVERY_AT ? 0 : 50
     const order: Order = {
@@ -37,8 +37,25 @@ export function useStore() {
       status:      'completed',
       method,
       fulfillment,
+      payLaterTerm,
     }
     setOrders(prev => [order, ...prev])
+    setAnnouncements(prev => [{
+      id: nextAnnouncementId++,
+      title: 'Order Confirmed',
+      message: `Your order ${order.id} has been confirmed and is now being processed.`,
+      createdAt: new Date().toISOString(),
+    }, ...prev])
+  }, [])
+
+  const cancelOrder = useCallback((id: string) => {
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'cancelled' } : o))
+    setAnnouncements(prev => [{
+      id: nextAnnouncementId++,
+      title: 'Order Cancelled',
+      message: `Your order ${id} has been cancelled successfully.`,
+      createdAt: new Date().toISOString(),
+    }, ...prev])
   }, [])
 
   const addAnnouncement    = useCallback((a: Omit<Announcement, 'id' | 'createdAt'>) =>
@@ -48,7 +65,7 @@ export function useStore() {
 
   return {
     products, categories, orders, announcements,
-    addProduct, updateStock, removeProduct, addCategory, removeCategory, updateProduct, placeOrder,
+    addProduct, updateStock, removeProduct, addCategory, removeCategory, updateProduct, placeOrder, cancelOrder,
     addAnnouncement, removeAnnouncement,
   }
 }

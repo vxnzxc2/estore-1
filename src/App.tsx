@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Search, X, PartyPopper } from 'lucide-react'
-import type { CartItem, Product } from './types'
+import type { CartItem, Product, UserProfile, MembershipPlan } from './types'
 import { useStore } from './store'
 import Header            from './components/Header'
 import CategoryFilter    from './components/CategoryFilter'
@@ -10,6 +10,7 @@ import Footer            from './components/Footer'
 import BottomNav         from './components/BottomNav'
 import SettingsPanel     from './components/SettingsPanel'
 import StoreLocator      from './components/StoreLocator'
+import ProfilePanel      from './components/ProfilePanel'
 import BarcodeScanner    from './components/BarcodeScanner'
 import ScanResult        from './components/ScanResult'
 import ActivityScreen    from './components/ActivityScreen'
@@ -17,13 +18,14 @@ import NotificationsPanel from './components/NotificationsPanel'
 import Calculator        from './components/Calculator'
 import LoginPage         from './admin/LoginPage'
 import AdminPanel        from './admin/AdminPanel'
-import SupportAbout from './components/SupportAbout'
+import SupportAbout      from './components/SupportAbout'
+import TopUpWalletModal   from './components/TopUpWalletModal'
 
 export default function App() {
   const {
     products, categories, orders, announcements,
     addProduct, updateStock, removeProduct, updateProduct,
-    addCategory, removeCategory, placeOrder,
+    addCategory, removeCategory, placeOrder, cancelOrder,
     addAnnouncement, removeAnnouncement,
   } = useStore()
 
@@ -37,8 +39,19 @@ export default function App() {
   const [loggedIn,          setLoggedIn]          = useState(false)
   const [light,             setLight]             = useState(false)
   const [showScanner,       setShowScanner]       = useState(false)
+  const [showProfile,       setShowProfile]       = useState(false)
+  const [walletTopUpAmount, setWalletTopUpAmount] = useState<number | null>(null)
+  const [user,              setUser]              = useState<UserProfile>({
+    id: 'user-1',
+    name: 'Ana Reyes',
+    email: 'ana.reyes@example.com',
+    phone: '0917 123 4567',
+    membership: 'Free',
+    walletBalance: 450.25,
+    points: 0,
+  })
   const [scanResult,        setScanResult]        = useState<{ barcode: string; product: Product | null } | null>(null)
-  const [showSettings,      setShowSettings]      = useState(false)
+  const [showSettings,      setShowSettings]      = useState(true)
   const [showLocator,       setShowLocator]       = useState(false)
   const [showActivity,      setShowActivity]      = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
@@ -83,17 +96,65 @@ export default function App() {
     setCartOpen(true)
   }
 
-  const handlePlaceOrder = (method: string, fulfillment: string) => {
-    placeOrder(cart, method, fulfillment)
+  const handlePlaceOrder = (method: string, fulfillment: string, payLaterTerm?: number) => {
+    placeOrder(cart, method, fulfillment, payLaterTerm)
+    const cartTotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0)
+    const earnedPoints = Math.floor(cartTotal / 100)
+    if (earnedPoints > 0) {
+      setUser(prev => ({ ...prev, points: prev.points + earnedPoints }))
+      addAnnouncement({
+        title: 'Points earned',
+        message: `You earned ${earnedPoints} point${earnedPoints === 1 ? '' : 's'} from your purchase!`,
+      })
+    }
     setOrderPlaced(true)
     setCart([])
     setCartOpen(false)
+    setShowActivity(true)
     setTimeout(() => setOrderPlaced(false), 3500)
   }
 
   const handleBarcodeDetected = (barcode: string) => {
     setShowScanner(false)
     setScanResult({ barcode, product: products.find(p => p.barcode === barcode) ?? null })
+  }
+
+  const handleCancelOrder = (id: string) => {
+    cancelOrder(id)
+  }
+
+  const handleRedeemPoints = (points: number) => {
+    if (points <= 0) return
+    setUser(prev => ({ ...prev, walletBalance: prev.walletBalance + points, points: 0 }))
+    addAnnouncement({
+      title: 'Points redeemed',
+      message: `You redeemed ${points} point${points === 1 ? '' : 's'} for ₱${points}.`,
+    })
+  }
+
+  const handleRequestWalletTopUp = (amount: number) => {
+    setWalletTopUpAmount(amount)
+  }
+
+  const handleWalletTopUpConfirm = (method: string) => {
+    if (!walletTopUpAmount || walletTopUpAmount < 50) return
+    setUser(prev => ({ ...prev, walletBalance: prev.walletBalance + walletTopUpAmount }))
+    addAnnouncement({
+      title: 'Wallet funded',
+      message: `₱${walletTopUpAmount} has been added to your wallet via ${method}.`,
+    })
+    setWalletTopUpAmount(null)
+  }
+
+  const handleSubscribePlan = (plan: MembershipPlan) => {
+    setShowSettings(false)
+    setUser(prev => ({ ...prev, membership: plan }))
+    addAnnouncement({
+      title: plan === 'Free' ? 'Plan updated' : 'Membership activated',
+      message: plan === 'Free'
+        ? 'You are now on the Free plan.'
+        : `You are now on the ${plan} plan with premium benefits.`,
+    })
   }
 
   // ── Admin mode is rendered inside the main return to keep hooks stable
@@ -150,15 +211,18 @@ export default function App() {
       {adminContent}
       {!adminContent && (
         <div className={`min-h-screen ${bg} pb-28 transition-colors duration-300`}>
+          {showProfile && (
+            <ProfilePanel user={user} light={light} onClose={() => setShowProfile(false)} onRequestTopUp={handleRequestWalletTopUp} onRedeemPoints={handleRedeemPoints} />
+          )}
 
       {/* Toast */}
       {orderPlaced && (
         <div className="animate-fade-up fixed top-4 left-4 right-4 z-50 bg-green-500 text-white font-semibold px-5 py-3.5 rounded-2xl shadow-2xl text-sm flex items-center gap-3 max-w-sm mx-auto">
-          <PartyPopper size={18} strokeWidth={2} /> Order placed! Salamat, suki!
+          <PartyPopper size={18} strokeWidth={2} /> Order placed! Salamat, suki! View it in Activity.
         </div>
       )}
 
-      <Header totalQty={totalQty} time={time} onCartOpen={() => setCartOpen(true)} light={light} />
+<Header totalQty={totalQty} time={time} onCartOpen={() => setCartOpen(true)} onProfileOpen={() => setShowProfile(true)} user={user} light={light} />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 pt-5">
 
@@ -276,12 +340,25 @@ export default function App() {
       {showSettings && (
         <SettingsPanel
           light={light}
+          membership={user.membership}
           onToggleLight={() => setLight(l => !l)}
           onOpenAdmin={() => { setShowSettings(false); setAdminMode(true) }}
+          onOpenProfile={() => { setShowSettings(false); setShowProfile(true) }}
+          onSubscribePlan={handleSubscribePlan}
           onClose={() => setShowSettings(false)}
           onOpenStoreLocator={() => { setShowSettings(false); setShowLocator(true) }}
           onOpenHistory={() => { setShowSettings(false); setShowActivity(true) }}
           onOpenSupport={() => { setShowSettings(false); setShowSupport(true) }}
+        />
+      )}
+
+      {/* Wallet top-up */}
+      {walletTopUpAmount !== null && (
+        <TopUpWalletModal
+          amount={walletTopUpAmount}
+          light={light}
+          onConfirm={handleWalletTopUpConfirm}
+          onCancel={() => setWalletTopUpAmount(null)}
         />
       )}
 
@@ -312,6 +389,7 @@ export default function App() {
           light={light}
           onClose={() => setShowActivity(false)}
           onOpenCart={() => setCartOpen(true)}
+          onCancelOrder={handleCancelOrder}
         />
       )}
 

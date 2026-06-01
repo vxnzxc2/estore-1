@@ -12,7 +12,7 @@ interface Props {
   onRemoveSelected: (ids: number[]) => void
   onClear: () => void
   onClose: () => void
-  onPlaceOrder: (method: string, fulfillment: string) => void
+  onPlaceOrder: (method: string, fulfillment: string, payLaterTerm?: number) => void
   light?: boolean
 }
 
@@ -110,7 +110,7 @@ export default function CartSidebar({ cart, onQtyChange, onRemoveSelected, onCle
   const toggleAll    = () => setSelected(selected.size === cart.length ? new Set() : new Set(cart.map(i => i.id)))
 
   const handleDeleteSelected = () => { onRemoveSelected([...selected]); setSelected(new Set()); setShowDeleteConf(false) }
-  const handleConfirmOrder   = (method: string, fulfillment: string) => { setShowPayment(false); onPlaceOrder(method, fulfillment) }
+  const handleConfirmOrder   = (method: string, fulfillment: string, payLaterTerm?: number) => { setShowPayment(false); onPlaceOrder(method, fulfillment, payLaterTerm) }
 
   const panel  = light ? 'bg-white'          : 'bg-[#0d1424]'
   const hdr    = light ? 'border-gray-100'   : 'border-white/5'

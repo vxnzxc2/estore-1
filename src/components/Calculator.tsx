@@ -83,10 +83,6 @@ export default function Calculator({ light, onClose }: Props) {
     setDisplay(d => fmt(parseFloat(d) / 100))
   }
 
-  const handleNegate = () => {
-    setDisplay(d => d.startsWith('-') ? d.slice(1) : d === '0' ? '0' : '-' + d)
-  }
-
   const ROWS = [
     [
       { label: 'AC', action: handleClear,   cls: clrBtn },

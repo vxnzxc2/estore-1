@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
-  X, ChevronRight, ChevronDown, HelpCircle, Shield, FileText,
-  User, Lock, AlertTriangle, Ticket, Bell, LifeBuoy, Info,
+  X, ChevronRight, ChevronDown, Shield, FileText,
+  User, Lock, AlertTriangle, Ticket, Bell, LifeBuoy,
   MessageSquare, KeyRound, ArrowLeft, Store, Phone, Mail, Flag, MapPin, CheckCircle
 } from 'lucide-react'
 
@@ -134,8 +134,6 @@ export default function SupportAbout({ onClose, light }: Props) {
   const sub    = light ? 'text-gray-400' : 'text-slate-500'
   const card   = light ? 'bg-white border border-gray-200 shadow-sm' : 'bg-slate-800/60 border border-white/5'
   const secLbl = light ? 'text-gray-400' : 'text-slate-500'
-  const divider= light ? 'bg-gray-100'  : 'bg-white/5'
-
   const goBack = () => setScreen('main')
 
   // ── Header ──────────────────────────────────────────────────────────────
