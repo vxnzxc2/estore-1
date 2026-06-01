@@ -1,6 +1,7 @@
 import { X, Sun, Moon, Shield, Lock, Store, MapPin, ChevronRight, Info, History, HelpCircle, User } from 'lucide-react'
 
 import type { MembershipPlan } from '../types'
+import SubscriptionTab from './SubscriptionTab'
 
 interface Props {
   light: boolean
@@ -9,13 +10,14 @@ interface Props {
   onOpenAdmin: () => void
   onOpenProfile: () => void
   onSubscribePlan: (plan: MembershipPlan) => void
+  onOpenPlansModal?: () => void
   onClose: () => void
   onOpenStoreLocator: () => void
   onOpenHistory: () => void
   onOpenSupport: () => void
 }
 
-export default function SettingsPanel({ light, membership, onToggleLight, onOpenAdmin, onOpenProfile, onSubscribePlan, onClose, onOpenStoreLocator, onOpenHistory, onOpenSupport }: Props) {
+export default function SettingsPanel({ light, membership, onToggleLight, onOpenAdmin, onOpenProfile, onSubscribePlan, onOpenPlansModal, onClose, onOpenStoreLocator, onOpenHistory, onOpenSupport }: Props) {
   const bg      = light ? 'bg-white'       : 'bg-[#0d1424]'
   const overlay = light ? 'bg-black/20'    : 'bg-black/60'
   const hdr     = light ? 'border-gray-100': 'border-white/5'
@@ -63,28 +65,13 @@ export default function SettingsPanel({ light, membership, onToggleLight, onOpen
             </button>
           </div>
 
-          {/* Subscription */}
           <div className="px-5 pt-5 pb-2">
-            <p className={`text-xs font-semibold ${sec} uppercase tracking-widest mb-3`}>Subscription</p>
-            <p className={`text-xs ${sub} mb-3`}>Choose the plan that fits your sari-sari store style.</p>
-            <div className="grid gap-3">
-              {(['Free', 'Pro', 'Max'] as MembershipPlan[]).map(plan => {
-                const active = plan === membership
-                const planColor = plan === 'Free' ? 'text-slate-600 bg-slate-100 border-slate-200' : plan === 'Pro' ? 'text-blue-600 bg-blue-50 border-blue-100' : 'text-amber-600 bg-amber-50 border-amber-100'
-                return (
-                  <button key={plan} type="button" onClick={() => onSubscribePlan(plan)}
-                    className={`w-full flex items-center justify-between gap-3 p-4 rounded-2xl border transition-colors ${active ? 'border-amber-500 shadow-sm shadow-amber-500/10' : 'border-white/10'} ${plan === 'Free' ? (light ? 'bg-white' : 'bg-slate-900/60') : plan === 'Pro' ? (light ? 'bg-blue-50' : 'bg-blue-500/10') : (light ? 'bg-amber-50' : 'bg-amber-500/10')}`}>
-                    <div className="text-left">
-                      <p className={`font-semibold text-sm ${active ? 'text-amber-500' : title}`}>{plan} Plan</p>
-                      <p className={`text-xs ${sub}`}>{plan === 'Free' ? 'Basic access, no fees' : plan === 'Pro' ? 'More perks for regular shoppers' : 'All premium benefits'}</p>
-                    </div>
-                    <span className={`rounded-full px-3 py-1 text-[10px] font-semibold ${active ? 'bg-amber-500 text-white' : planColor}`}>
-                      {plan === 'Free' ? '₱0' : plan === 'Pro' ? '₱250/mo' : '₱500/mo'}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
+            <SubscriptionTab
+              light={light}
+              membership={membership}
+              onSubscribePlan={onSubscribePlan}
+              onOpenPlansModal={onOpenPlansModal}
+            />
           </div>
 
           {/* Appearance */}

@@ -9,6 +9,7 @@ import CartSidebar       from './components/CartSidebar'
 import Footer            from './components/Footer'
 import BottomNav         from './components/BottomNav'
 import SettingsPanel     from './components/SettingsPanel'
+import { PLANS, PLAN_ICONS } from './components/SubscriptionTab'
 import StoreLocator      from './components/StoreLocator'
 import ProfilePanel      from './components/ProfilePanel'
 import BarcodeScanner    from './components/BarcodeScanner'
@@ -51,7 +52,8 @@ export default function App() {
     points: 0,
   })
   const [scanResult,        setScanResult]        = useState<{ barcode: string; product: Product | null } | null>(null)
-  const [showSettings,      setShowSettings]      = useState(true)
+  const [showSettings,      setShowSettings]      = useState(false)
+  const [showPlansModal,    setShowPlansModal]    = useState(false)
   const [showLocator,       setShowLocator]       = useState(false)
   const [showActivity,      setShowActivity]      = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
@@ -346,10 +348,51 @@ export default function App() {
           onOpenProfile={() => { setShowSettings(false); setShowProfile(true) }}
           onSubscribePlan={handleSubscribePlan}
           onClose={() => setShowSettings(false)}
+          onOpenPlansModal={() => { setShowSettings(false); setShowPlansModal(true) }}
           onOpenStoreLocator={() => { setShowSettings(false); setShowLocator(true) }}
           onOpenHistory={() => { setShowSettings(false); setShowActivity(true) }}
           onOpenSupport={() => { setShowSettings(false); setShowSupport(true) }}
         />
+      )}
+
+      {/* Plans modal (centered) */}
+      {showPlansModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-xl" onClick={() => setShowPlansModal(false)} />
+          <div className="relative w-full max-w-3xl mx-4">
+            <button onClick={() => setShowPlansModal(false)} className="absolute top-3 right-3 z-10 w-9 h-9 rounded-lg bg-slate-800/70 text-slate-200 flex items-center justify-center backdrop-blur-sm">
+              <X size={16} strokeWidth={2.5} />
+            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-3 sm:p-5">
+              {PLANS.map(p => {
+                const Icon = PLAN_ICONS[p.plan]
+                const active = p.plan === user.membership
+                return (
+                  <div key={p.plan} className={`rounded-3xl overflow-hidden shadow-xl shadow-black/30 transition-all duration-300 min-h-[25rem] ${active ? 'bg-slate-900/90 ring-2 ring-amber-500/30 hover:-translate-y-1 hover:shadow-2xl' : 'bg-slate-900/80 hover:-translate-y-1 hover:shadow-2xl'}`}>
+                    <div className={`${p.headerBg} px-4 py-7 text-center`}>
+                      <div className={`w-12 h-12 rounded-full ${p.iconBg} flex items-center justify-center mx-auto mb-3`}>
+                        <Icon size={22} className="text-white" strokeWidth={2} />
+                      </div>
+                      <p className="text-white text-lg font-black uppercase tracking-widest" style={{ fontFamily: 'Syne, sans-serif' }}>{p.label}</p>
+                    </div>
+                    <div className="px-4 py-5">
+                      <div className={`text-2xl font-black ${p.accentText}`}>₱{p.amount}</div>
+                      <ul className="mt-3 space-y-2 text-sm text-slate-300">
+                        {p.perks.map(perk => (
+                          <li key={perk} className="flex items-start gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full mt-1 ${p.accentText.replace('text-', 'bg-')}`} />
+                            {perk}
+                          </li>
+                        ))}
+                      </ul>
+                      <button onClick={() => { handleSubscribePlan(p.plan); setShowPlansModal(false) }} className={`mt-4 w-full py-3 rounded-xl text-sm font-bold text-white ${active ? 'bg-white/10' : p.btnBg}`}>{active ? 'Current plan' : 'Select'}</button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Wallet top-up */}
