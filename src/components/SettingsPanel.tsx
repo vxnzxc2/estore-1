@@ -1,4 +1,4 @@
-import { X, Sun, Moon, Shield, Lock, Store, MapPin, ChevronRight, Info, History } from 'lucide-react'
+import { X, Sun, Moon, Shield, Lock, Store, MapPin, ChevronRight, Info, History, HelpCircle } from 'lucide-react'
 
 interface Props {
   light: boolean
@@ -7,9 +7,10 @@ interface Props {
   onClose: () => void
   onOpenStoreLocator: () => void
   onOpenHistory: () => void
+  onOpenSupport: () => void
 }
 
-export default function SettingsPanel({ light, onToggleLight, onOpenAdmin, onClose, onOpenStoreLocator, onOpenHistory }: Props) {
+export default function SettingsPanel({ light, onToggleLight, onOpenAdmin, onClose, onOpenStoreLocator, onOpenHistory, onOpenSupport }: Props) {
   const bg      = light ? 'bg-white'       : 'bg-[#0d1424]'
   const overlay = light ? 'bg-black/20'    : 'bg-black/60'
   const hdr     = light ? 'border-gray-100': 'border-white/5'
@@ -87,6 +88,18 @@ export default function SettingsPanel({ light, onToggleLight, onOpenAdmin, onClo
                 <div className="flex-1 text-left">
                   <p className={`font-semibold ${title} text-sm`}>Find Nearest Store</p>
                   <p className={`${sub} text-xs`}>Locate Evaristo's near you</p>
+                </div>
+                <ChevronRight size={16} className={sub} strokeWidth={2} />
+              </button>
+
+              <button onClick={() => { onClose(); onOpenSupport() }}
+                className={`w-full flex items-center gap-3 p-4 rounded-2xl border ${row} transition-colors`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${light ? 'bg-blue-50' : 'bg-blue-500/10'}`}>
+                  <HelpCircle size={18} className="text-blue-500" strokeWidth={2} />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className={`font-semibold ${title} text-sm`}>Support & About</p>
+                  <p className={`${sub} text-xs`}>Help, privacy, terms</p>
                 </div>
                 <ChevronRight size={16} className={sub} strokeWidth={2} />
               </button>

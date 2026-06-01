@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   X, ChevronRight, ChevronDown, HelpCircle, Shield, FileText,
   User, Lock, AlertTriangle, Ticket, Bell, LifeBuoy, Info,
-  MessageSquare, KeyRound, ArrowLeft
+  MessageSquare, KeyRound, ArrowLeft, Store, Phone, Mail, Flag, MapPin, CheckCircle
 } from 'lucide-react'
 
 interface Props {
@@ -198,14 +198,17 @@ export default function SupportAbout({ onClose, light }: Props) {
               {/* Store identity card */}
               <div className={`${card} rounded-2xl p-4 flex items-center gap-4`}>
                 <div className="w-14 h-14 rounded-2xl bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
-                  <span className="text-2xl">🏪</span>
+                  <Store size={28} className="text-white" strokeWidth={2.5} />
                 </div>
                 <div>
                   <p className={`font-bold ${title} text-base`} style={{ fontFamily: 'Syne, sans-serif' }}>
                     Evaristo's
                   </p>
                   <p className={`text-xs ${sub}`}>Sari-Sari Store · Est. 1993</p>
-                  <p className={`text-xs ${sub}`}>🇵🇭 Proudly Pinoy · Family Owned</p>
+                  <div className="flex items-center gap-1 text-xs">
+                    <Flag size={12} className="text-red-500" strokeWidth={2} />
+                    <span className={sub}>Proudly Pinoy · Family Owned</span>
+                  </div>
                 </div>
               </div>
 
@@ -305,8 +308,14 @@ export default function SupportAbout({ onClose, light }: Props) {
 
               <InfoCard title="Need more help?" light={light}>
                 <p>Can't find what you're looking for? Open a Support Ticket and our team will get back to you within 24 hours.</p>
-                <p>📞 <strong>0912-345-6789</strong></p>
-                <p>✉️ <strong>support@evaristo.ph</strong></p>
+                <p className="flex items-center gap-2">
+                  <Phone size={14} className="text-blue-500" strokeWidth={2} />
+                  <strong>0912-345-6789</strong>
+                </p>
+                <p className="flex items-center gap-2">
+                  <Mail size={14} className="text-amber-500" strokeWidth={2} />
+                  <strong>support@evaristo.ph</strong>
+                </p>
               </InfoCard>
             </>
           )}
@@ -339,8 +348,8 @@ export default function SupportAbout({ onClose, light }: Props) {
 
               <InfoCard title="Account Recovery" light={light}>
                 <p>If you've lost access to your account, contact us directly:</p>
-                <p>📞 <strong>0912-345-6789</strong> — available 6AM–10PM daily</p>
-                <p>✉️ <strong>support@evaristo.ph</strong> — reply within 24 hrs</p>
+                <p className="flex items-center gap-2"><Phone size={14} className="text-blue-500" strokeWidth={2} /><strong>0912-345-6789</strong> — available 6AM–10PM daily</p>
+                <p className="flex items-center gap-2"><Mail size={14} className="text-amber-500" strokeWidth={2} /><strong>support@evaristo.ph</strong> — reply within 24 hrs</p>
                 <p>Please have your registered name and order history ready to verify identity.</p>
               </InfoCard>
 
@@ -364,11 +373,16 @@ export default function SupportAbout({ onClose, light }: Props) {
                 <p>We are committed to maintaining a safe shopping environment. If you experience any of the following, please contact us immediately:</p>
                 <ul className="space-y-1 mt-1">
                   {[
-                    '🚨 Unauthorized access to your account',
-                    '🚨 Suspicious messages or phishing attempts',
-                    '🚨 Fraudulent orders placed in your name',
-                    '🚨 Harassment or misconduct by any staff',
-                  ].map(item => <li key={item}>{item}</li>)}
+                    'Unauthorized access to your account',
+                    'Suspicious messages or phishing attempts',
+                    'Fraudulent orders placed in your name',
+                    'Harassment or misconduct by any staff',
+                  ].map(item => (
+                    <li key={item} className="flex items-start gap-2">
+                      <AlertTriangle size={14} className="mt-0.5 text-red-500" strokeWidth={2} />
+                      <span>{item}</span>
+                    </li>
+                  ))}
                 </ul>
               </InfoCard>
 
@@ -376,12 +390,17 @@ export default function SupportAbout({ onClose, light }: Props) {
                 <p>To keep your account safe:</p>
                 <ul className="space-y-1 mt-1">
                   {[
-                    '✅ Use a strong, unique password',
-                    '✅ Never share your login credentials',
-                    '✅ Log out on shared devices',
-                    '✅ Enable security alerts in Account Center',
-                    '✅ Verify delivery personnel before handing over payment',
-                  ].map(item => <li key={item}>{item}</li>)}
+                    'Use a strong, unique password',
+                    'Never share your login credentials',
+                    'Log out on shared devices',
+                    'Enable security alerts in Account Center',
+                    'Verify delivery personnel before handing over payment',
+                  ].map(item => (
+                    <li key={item} className="flex items-start gap-2">
+                      <CheckCircle size={14} className="mt-0.5 text-emerald-500" strokeWidth={2} />
+                      <span>{item}</span>
+                    </li>
+                  ))}
                 </ul>
               </InfoCard>
 
@@ -432,9 +451,18 @@ export default function SupportAbout({ onClose, light }: Props) {
 
               <InfoCard title="8. Contact" light={light}>
                 <p>For any questions regarding these terms, contact us at:</p>
-                <p>📞 <strong>0912-345-6789</strong></p>
-                <p>✉️ <strong>support@evaristo.ph</strong></p>
-                <p>📍 Blk 3 Lot 5, Sampaguita St., Maynila</p>
+                <p className="flex items-center gap-2">
+                  <Phone size={14} className="text-blue-500" strokeWidth={2} />
+                  <strong>0912-345-6789</strong>
+                </p>
+                <p className="flex items-center gap-2">
+                  <Mail size={14} className="text-amber-500" strokeWidth={2} />
+                  <strong>support@evaristo.ph</strong>
+                </p>
+                <p className="flex items-center gap-2">
+                  <MapPin size={14} className="text-emerald-500" strokeWidth={2} />
+                  Blk 3 Lot 5, Sampaguita St., Maynila
+                </p>
               </InfoCard>
 
               <p className={`text-center text-[10px] ${sub} pb-2`}>

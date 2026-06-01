@@ -135,32 +135,11 @@ export default function BarcodePicker({ value, onChange, light }: Props) {
 
       {/* ── Single-line input + camera icon ─────────────────────────────── */}
       <div className={`flex items-center gap-2 border rounded-xl px-3 py-2.5 transition-colors ${inputWrap}`}>
-        <input
-          type="text"
-          placeholder="Input barcode"
-          value={localVal}
-          onChange={e => commitManual(e.target.value)}
-          className={`flex-1 text-sm bg-transparent outline-none font-mono tracking-wider ${inputText}`}
-        />
-
-        {/* Clear button — shown when there's a value */}
-        {localVal && (
-          <button
-            type="button"
-            onClick={() => commitManual('')}
-            className={`shrink-0 transition-colors ${
-              light ? 'text-gray-300 hover:text-red-500' : 'text-slate-600 hover:text-red-400'
-            }`}
-          >
-            <X size={14} strokeWidth={2.5} />
-          </button>
-        )}
-
-        {/* Camera scan button */}
+        {/* Camera scan button on the left */}
         <button
           type="button"
           onClick={scanning ? stopScanner : startScanner}
-          className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+          className={`shrink-0 w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
             scanning
               ? 'bg-amber-500 text-white'
               : camBtn
@@ -172,6 +151,27 @@ export default function BarcodePicker({ value, onChange, light }: Props) {
             : <Camera size={16} strokeWidth={2} />
           }
         </button>
+
+        <input
+          type="text"
+          placeholder="Input barcode or scan"
+          value={localVal}
+          onChange={e => commitManual(e.target.value)}
+          className={`flex-1 text-sm bg-transparent outline-none font-mono tracking-wider ${inputText}`}
+        />
+
+        {/* Clear button — shown when there's a value */}
+        {localVal && !scanning && (
+          <button
+            type="button"
+            onClick={() => commitManual('')}
+            className={`shrink-0 transition-colors ${
+              light ? 'text-gray-300 hover:text-red-500' : 'text-slate-600 hover:text-red-400'
+            }`}
+          >
+            <X size={14} strokeWidth={2.5} />
+          </button>
+        )}
       </div>
 
       {/* Confirmed value pill */}

@@ -17,6 +17,7 @@ import NotificationsPanel from './components/NotificationsPanel'
 import Calculator        from './components/Calculator'
 import LoginPage         from './admin/LoginPage'
 import AdminPanel        from './admin/AdminPanel'
+import SupportAbout from './components/SupportAbout'
 
 export default function App() {
   const {
@@ -111,6 +112,7 @@ export default function App() {
       />
     )
   ) : null
+  const [showSupport, setShowSupport] = useState(false)
 
   // ── Store ─────────────────────────────────────────────────────────────────
   const allCats  = ['All', ...categories]
@@ -239,6 +241,7 @@ export default function App() {
               onAdd={addToCart}
               onBuyNow={buyNow}
               onRemove={removeItem}
+              onQtyChange={setQty}
               light={light}
               highlight={!!search && (p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()))}
             />
@@ -277,7 +280,8 @@ export default function App() {
           onOpenAdmin={() => { setShowSettings(false); setAdminMode(true) }}
           onClose={() => setShowSettings(false)}
           onOpenStoreLocator={() => { setShowSettings(false); setShowLocator(true) }}
-          onOpenHistory={() => setShowActivity(true)}
+          onOpenHistory={() => { setShowSettings(false); setShowActivity(true) }}
+          onOpenSupport={() => { setShowSettings(false); setShowSupport(true) }}
         />
       )}
 
@@ -318,6 +322,10 @@ export default function App() {
           light={light}
           onClose={() => setShowNotifications(false)}
         />
+      )}
+
+      {showSupport && (
+        <SupportAbout onClose={() => setShowSupport(false)} light={light} />
       )}
 
       {/* Calculator */}
