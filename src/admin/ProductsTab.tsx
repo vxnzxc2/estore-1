@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import * as LucideIcons from 'lucide-react'
-import { Plus, Trash2, Edit3, Check, X, Search, ImageOff, ChevronDown, ChevronUp, Barcode, Zap } from 'lucide-react'
+import { Plus, Trash2, Edit3, Check, X, Search, ImageOff, ChevronDown, ChevronUp, Camera, Zap } from 'lucide-react'
 import type { Product, FeaturedTag } from '../types'
 import Quagga from '@ericblade/quagga2'
 
@@ -55,22 +55,21 @@ const renderLucideIcon = (name: string, props: any = {}) => {
 const HAS_NATIVE_DETECTOR = typeof window !== 'undefined' && 'BarcodeDetector' in window
 
 function BarcodePicker({ value, onChange, light }: { value: string; onChange: (v: string) => void; light?: boolean }) {
-  const [active,   setActive]   = useState(false)
-  const [scanning, setScanning] = useState(false)
-  const [error,    setError]    = useState('')
+  const [cameraOpen, setCameraOpen] = useState(false)
+  const [camReady,   setCamReady]   = useState(false)
+  const [error,      setError]      = useState('')
   const scanRef   = useRef<HTMLDivElement>(null)
   const videoRef  = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const rafRef    = useRef<number>(0)
 
   useEffect(() => {
-    if (!active) return
+    if (!cameraOpen) return
 
     setError('')
-    setScanning(true)
+    setCamReady(false)
 
     if (HAS_NATIVE_DETECTOR) {
-      // ── Native BarcodeDetector ──────────────────────────────────────────
       if (!scanRef.current) return
       const vid = document.createElement('video')
       vid.playsInline = true
@@ -85,6 +84,7 @@ function BarcodePicker({ value, onChange, light }: { value: string; onChange: (v
         streamRef.current = stream
         vid.srcObject = stream
         vid.play()
+        setCamReady(true)
 
         const detector = new (window as any).BarcodeDetector({
           formats: ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e', 'code_39'],
@@ -92,14 +92,13 @@ function BarcodePicker({ value, onChange, light }: { value: string; onChange: (v
         const tick = async () => {
           try {
             const results = await detector.detect(vid)
-            if (results.length > 0) { onChange(results[0].rawValue); setActive(false); return }
+            if (results.length > 0) { onChange(results[0].rawValue); setCameraOpen(false); return }
           } catch (_) {}
           rafRef.current = requestAnimationFrame(tick)
         }
         rafRef.current = requestAnimationFrame(tick)
       }).catch(err => {
         setError(pickerError(err))
-        setScanning(false)
       })
 
       return () => {
@@ -107,15 +106,14 @@ function BarcodePicker({ value, onChange, light }: { value: string; onChange: (v
         streamRef.current?.getTracks().forEach(t => t.stop())
         streamRef.current = null
         vid.remove()
-        setScanning(false)
+        setCamReady(false)
       }
     } else {
-      // ── Quagga fallback ─────────────────────────────────────────────────
       if (!scanRef.current) return
 
       const handler = (result: any) => {
         const code = result?.codeResult?.code
-        if (code) { onChange(code); setActive(false) }
+        if (code) { onChange(code); setCameraOpen(false) }
       }
 
       const tryInit = (useFacingEnv: boolean) => {
@@ -132,13 +130,14 @@ function BarcodePicker({ value, onChange, light }: { value: string; onChange: (v
           }, (err) => {
             if (err) {
               if (useFacingEnv) { tryInit(false); return }
-              setError(pickerError(err)); setScanning(false); return
+              setError(pickerError(err)); return
             }
             Quagga.start()
+            setCamReady(true)
           })
           Quagga.onDetected(handler)
         } catch (e) {
-          setError(pickerError(e)); setScanning(false)
+          setError(pickerError(e))
         }
       }
 
@@ -147,10 +146,10 @@ function BarcodePicker({ value, onChange, light }: { value: string; onChange: (v
       return () => {
         try { Quagga.offDetected(handler) } catch (_) {}
         try { Quagga.stop() } catch (_) {}
-        setScanning(false)
+        setCamReady(false)
       }
     }
-  }, [active])
+  }, [cameraOpen])
 
   function pickerError(err: any): string {
     const name = err?.name ?? String(err)
@@ -161,60 +160,85 @@ function BarcodePicker({ value, onChange, light }: { value: string; onChange: (v
     return 'Camera unavailable.'
   }
 
+  const inputBorder = light
+    ? 'border-gray-300 bg-white text-gray-900 placeholder:text-gray-400'
+    : 'border-slate-600 bg-slate-900 text-white placeholder:text-slate-500'
+
   return (
     <div className="space-y-2">
-      {!active ? (
-        /* Idle — show current value (if any) + scan button */
-        <div className="space-y-2">
-          {value && (
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${light ? 'bg-green-50' : 'bg-green-500/10'}`}>
-              <Check size={13} className="text-green-500" strokeWidth={3} />
-              <p className={`flex-1 text-xs font-mono font-bold ${light ? 'text-green-700' : 'text-green-400'}`}>{value}</p>
-              <button type="button" onClick={() => onChange('')} className="text-red-400 hover:text-red-500 transition-colors">
-                <X size={13} strokeWidth={2.5} />
-              </button>
+      {/* ── Input row ── */}
+      <div className={`flex items-center border rounded-xl overflow-hidden ${inputBorder}`}>
+        {/* Camera icon — far left */}
+        <button
+          type="button"
+          title={cameraOpen ? 'Close camera' : 'Scan barcode'}
+          onClick={() => setCameraOpen(o => !o)}
+          className={`flex items-center justify-center w-10 h-10 shrink-0 border-r transition-colors ${
+            cameraOpen
+              ? 'bg-amber-500 text-white border-amber-500'
+              : light
+                ? 'bg-gray-50 text-gray-500 hover:bg-amber-50 hover:text-amber-500 border-gray-300'
+                : 'bg-slate-800 text-slate-400 hover:bg-amber-500/10 hover:text-amber-400 border-slate-700'
+          }`}
+        >
+          <Camera size={15} strokeWidth={2} />
+        </button>
+
+        {/* Manual text input */}
+        <input
+          type="text"
+          placeholder="Enter or scan barcode…"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="flex-1 px-3 py-2 text-sm bg-transparent outline-none font-mono"
+        />
+
+        {/* Clear */}
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className={`flex items-center justify-center w-8 shrink-0 transition-colors ${
+              light ? 'text-gray-400 hover:text-red-500' : 'text-slate-500 hover:text-red-400'
+            }`}
+          >
+            <X size={13} strokeWidth={2.5} />
+          </button>
+        )}
+      </div>
+
+      {/* ── Camera view — visible only when open ── */}
+      {cameraOpen && (
+        <div className={`relative rounded-xl overflow-hidden ${light ? 'bg-gray-100' : 'bg-slate-900'}`} style={{ height: 160 }}>
+          <div ref={scanRef} className="w-full h-full" style={{ position: 'relative', overflow: 'hidden' }} />
+
+          {/* Scan-line overlay */}
+          {camReady && !error && (
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+              <div className="relative w-40 h-24">
+                {(['top-0 left-0 border-t-2 border-l-2', 'top-0 right-0 border-t-2 border-r-2',
+                  'bottom-0 left-0 border-b-2 border-l-2', 'bottom-0 right-0 border-b-2 border-r-2'] as const
+                ).map((cls, i) => (
+                  <div key={i} className={`absolute w-5 h-5 border-amber-400 rounded-sm ${cls}`} />
+                ))}
+                <div className="absolute left-0 right-0 h-0.5 bg-amber-400 animate-scan-line opacity-80" />
+              </div>
             </div>
           )}
-          <button type="button" onClick={() => setActive(true)}
-            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed text-sm font-medium transition-colors ${
-              light
-                ? 'border-gray-300 text-gray-500 hover:border-amber-400 hover:text-amber-500'
-                : 'border-slate-600 text-slate-400 hover:border-amber-500/60 hover:text-amber-400'
-            }`}>
-            <Barcode size={16} strokeWidth={2} />
-            {value ? 'Re-scan Barcode' : 'Scan Barcode'}
-          </button>
-        </div>
-      ) : (
-        /* Active camera view */
-        <div className="space-y-2">
-          <div className={`relative rounded-xl overflow-hidden ${light ? 'bg-gray-100' : 'bg-slate-900'}`} style={{ height: 160 }}>
-            <div ref={scanRef} className="w-full h-full" style={{ position: 'relative', overflow: 'hidden' }} />
-            {scanning && (
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="relative w-40 h-24">
-                  {[['top-0 left-0 border-t-2 border-l-2'], ['top-0 right-0 border-t-2 border-r-2'],
-                    ['bottom-0 left-0 border-b-2 border-l-2'], ['bottom-0 right-0 border-b-2 border-r-2']
-                  ].map(([cls], i) => <div key={i} className={`absolute w-5 h-5 border-amber-400 rounded-sm ${cls}`} />)}
-                  <div className="absolute left-0 right-0 h-0.5 bg-amber-400 animate-scan-line opacity-80" />
-                </div>
-              </div>
-            )}
-            {!scanning && !error && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
-              </div>
-            )}
-            {error && (
-              <div className="absolute inset-0 flex items-center justify-center px-4">
-                <p className="text-red-400 text-xs text-center">{error}</p>
-              </div>
-            )}
-          </div>
-          <button type="button" onClick={() => setActive(false)}
-            className={`w-full text-xs py-2 rounded-lg transition-colors ${light ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
-            Cancel
-          </button>
+
+          {/* Spinner while initialising */}
+          {!camReady && !error && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="absolute inset-0 flex items-center justify-center px-4">
+              <p className="text-red-400 text-xs text-center">{error}</p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -231,10 +255,6 @@ export default function ProductsTab({ products, categories, onAdd, onRemove, onU
   const [newTagIcon,  setNewTagIcon]  = useState<FeaturedTag['icon']>('Zap')
   const [newTagIconSearch, setNewTagIconSearch] = useState('')
   const [newTagIconOpen, setNewTagIconOpen] = useState(false)
-  const [editTagLabel, setEditTagLabel] = useState('')
-  const [editTagIcon,  setEditTagIcon]  = useState<FeaturedTag['icon']>('Zap')
-  const [editTagIconSearch, setEditTagIconSearch] = useState('')
-  const [editTagIconOpen, setEditTagIconOpen] = useState(false)
   const [stockFilter, setStockFilter] = useState(initialFilter || 'all')
   const [imgErrors,   setImgErrors]   = useState<Set<number>>(new Set())
   const [confirmDel,  setConfirmDel]  = useState<number | null>(null)
@@ -273,6 +293,15 @@ export default function ProductsTab({ products, categories, onAdd, onRemove, onU
     return matchSearch && matchStock && matchCat
   })
 
+  // Count alert (low + out-of-stock) products per category for sidebar badges
+  const alertByCategory: Record<string, number> = {}
+  for (const p of products) {
+    if (p.stock <= 5) {
+      alertByCategory[p.category] = (alertByCategory[p.category] ?? 0) + 1
+    }
+  }
+  const totalAlerts = Object.values(alertByCategory).reduce((s, n) => s + n, 0)
+
   const handleAdd = () => {
     if (!form.name || !form.category || form.price <= 0) return
     onAdd({ ...form, price: Number(form.price), stock: Number(form.stock), badge: form.badge || null, barcode: form.barcode || undefined, stockUnit: form.stockUnit, featuredTags: form.featuredTags || [] })
@@ -290,19 +319,6 @@ export default function ProductsTab({ products, categories, onAdd, onRemove, onU
     setForm(f => ({ ...f, featuredTags: [...(f.featuredTags || []), nextTag] }))
     setNewTagLabel('')
     setNewTagIcon('Zap')
-  }
-
-  const addEditFeaturedTag = () => {
-    const label = editTagLabel.trim()
-    if (!label) return
-    const nextTag: FeaturedTag = {
-      id: `${label.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-      label,
-      icon: editTagIcon,
-    }
-    setEditForm(f => ({ ...f, featuredTags: [...(f.featuredTags || []), nextTag] }))
-    setEditTagLabel('')
-    setEditTagIcon('Zap')
   }
 
   const startEdit = (p: Product) => {
@@ -340,12 +356,20 @@ export default function ProductsTab({ products, categories, onAdd, onRemove, onU
       <div className="md:w-44 shrink-0">
         <p className={`text-xs font-semibold ${sub} uppercase tracking-wider px-2 mb-2`}>Category</p>
         <div className="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-visible pb-1 md:pb-0">
-          {['all', ...categories].map(cat => (
-            <button key={cat} onClick={() => setCatFilter(cat)}
-              className={`shrink-0 md:shrink text-left px-3 py-2 rounded-xl text-xs font-medium transition-all capitalize ${catBtn(catFilter === cat)}`}>
-              {cat === 'all' ? 'All Products' : cat}
-            </button>
-          ))}
+          {['all', ...categories].map(cat => {
+            const alertCount = cat === 'all' ? totalAlerts : (alertByCategory[cat] ?? 0)
+            return (
+              <button key={cat} onClick={() => setCatFilter(cat)}
+                className={`shrink-0 md:shrink text-left px-3 py-2 rounded-xl text-xs font-medium transition-all capitalize flex items-center justify-between gap-1.5 ${catBtn(catFilter === cat)}`}>
+                <span className="truncate">{cat === 'all' ? 'All Products' : cat}</span>
+                {alertCount > 0 && (
+                  <span className="shrink-0 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                    {alertCount}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -538,12 +562,19 @@ export default function ProductsTab({ products, categories, onAdd, onRemove, onU
             {filtered.map(p => {
               const isExpanded = expanded.has(p.id)
               const isEditing  = editProduct === p.id
+              const isOut      = p.stock === 0
+              const isLow      = !isOut && p.stock <= 5
+              const rowAlert   = isOut
+                ? light ? 'bg-red-50 border-l-4 border-l-red-400'   : 'bg-red-500/5 border-l-4 border-l-red-500'
+                : isLow
+                ? light ? 'bg-orange-50 border-l-4 border-l-orange-400' : 'bg-orange-500/5 border-l-4 border-l-orange-500'
+                : ''
 
               return (
                 <div key={p.id}>
                   {/* Row */}
                   <div
-                    className={`flex sm:grid sm:grid-cols-[36px_1fr_72px_72px_90px_76px] items-center px-3 sm:px-4 py-3 ${rowH} transition-colors cursor-pointer gap-2 sm:gap-0`}
+                    className={`flex sm:grid sm:grid-cols-[36px_1fr_72px_72px_90px_76px] items-center px-3 sm:px-4 py-3 ${rowH} ${rowAlert} transition-colors cursor-pointer gap-2 sm:gap-0`}
                     onClick={() => !isEditing && toggleExpand(p.id)}>
 
                     {/* Thumb */}
@@ -668,77 +699,6 @@ export default function ProductsTab({ products, categories, onAdd, onRemove, onU
                                 onChange={v => setEditForm(f => ({ ...f, barcode: v }))}
                                 light={light}
                               />
-                            </div>
-                          </div>
-
-                          {/* Tag toggles */}
-                          <div>
-                            <p className={`text-xs ${lbl} mb-2`}>Featured Tags</p>
-                            <div className="flex flex-wrap gap-2 mb-3">
-                              {FEATURE_TAGS.map(tag => (
-                                <button key={tag.key} type="button"
-                                  onClick={() => setEditForm(f => ({ ...f, [tag.key]: !(f as any)[tag.key] }))}
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${(editForm as any)[tag.key] ? 'bg-amber-500 text-white' : `${light ? 'bg-white' : 'bg-slate-900'} border ${light ? 'border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-500' : 'border-slate-600 text-slate-400 hover:border-amber-500/60 hover:text-slate-400'}`}`}>
-                                  {tag.label}
-                                  {(editForm as any)[tag.key] && <Check size={10} strokeWidth={3} className="ml-0.5" />}
-                                </button>
-                              ))}
-                            </div>
-                            {(editForm.featuredTags || []).length > 0 && (
-                              <div className="mb-3">
-                                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Custom Tags</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {(editForm.featuredTags || []).map((tag, idx) => (
-                                    <button key={tag.id} type="button"
-                                      onClick={() => setEditForm(f => ({ ...f, featuredTags: (f.featuredTags || []).filter((_, i) => i !== idx) }))}
-                                      className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100">
-                                      {renderLucideIcon(tag.icon, { size: 12, strokeWidth: 2.5 })}
-                                      {tag.label}
-                                      <X size={12} />
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                              <div>
-                                <label className={`text-xs ${lbl} mb-1 block`}>Tag label</label>
-                                <input type="text" value={editTagLabel} onChange={e => setEditTagLabel(e.target.value)}
-                                  className={`w-full border rounded-xl px-3 py-2 text-sm outline-none transition-colors ${inp}`} placeholder="e.g. Sale" />
-                              </div>
-                              <div className="sm:col-span-2">
-                                <label className={`text-xs ${lbl} mb-1 block`}>Icon</label>
-                                <div className="relative">
-                                  <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
-                                    <Search size={16} />
-                                  </div>
-                                  <input type="text" value={editTagIconSearch} onChange={e => { setEditTagIconSearch(e.target.value); setEditTagIconOpen(true) }}
-                                    onFocus={() => setEditTagIconOpen(true)}
-                                    placeholder="Search icon names…"
-                                    className={`w-full border rounded-xl px-10 py-2 text-sm outline-none transition-colors ${inp}`} />
-                                  {(editTagIconOpen || editTagIconSearch) && (
-                                    <div className="absolute left-0 right-0 z-20 mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-72 overflow-y-auto rounded-2xl p-2 shadow-lg bg-slate-950 border border-slate-700 text-white">
-                                      {ICON_OPTIONS.filter(opt => opt.id.toLowerCase().includes(editTagIconSearch.toLowerCase())).map(opt => (
-                                        <button key={opt.id} type="button"
-                                          onClick={() => { setEditTagIcon(opt.id); setEditTagIconOpen(false) }}
-                                          className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl border transition-colors ${editTagIcon === opt.id ? 'bg-amber-500 text-white border-amber-500' : 'bg-slate-900 text-slate-100 border-slate-700 hover:bg-slate-800'}`}>
-                                          {renderLucideIcon(opt.id, { size: 16, strokeWidth: 2.5, className: 'text-white' })}
-                                          <span className="text-[10px] text-center leading-tight text-slate-100">{opt.label}</span>
-                                        </button>
-                                      ))}
-                                      {ICON_OPTIONS.filter(opt => opt.id.toLowerCase().includes(editTagIconSearch.toLowerCase())).length === 0 && (
-                                        <div className="text-xs text-slate-400 px-3 py-2 col-span-full">No matching icons</div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="mt-3">
-                              <button type="button" onClick={addEditFeaturedTag}
-                                className="px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-400 transition-colors">
-                                Add featured tag
-                              </button>
                             </div>
                           </div>
 

@@ -9,7 +9,6 @@ interface Props {
   onToggleLight: () => void
   onOpenAdmin: () => void
   onOpenProfile: () => void
-  onSubscribePlan: (plan: MembershipPlan) => void
   onOpenPlansModal?: () => void
   onClose: () => void
   onOpenStoreLocator: () => void
@@ -17,7 +16,7 @@ interface Props {
   onOpenSupport: () => void
 }
 
-export default function SettingsPanel({ light, membership, onToggleLight, onOpenAdmin, onOpenProfile, onSubscribePlan, onOpenPlansModal, onClose, onOpenStoreLocator, onOpenHistory, onOpenSupport }: Props) {
+export default function SettingsPanel({ light, membership, onToggleLight, onOpenAdmin, onOpenProfile, onOpenPlansModal, onClose, onOpenStoreLocator, onOpenHistory, onOpenSupport }: Props) {
   const bg      = light ? 'bg-white'       : 'bg-[#0d1424]'
   const overlay = light ? 'bg-black/20'    : 'bg-black/60'
   const hdr     = light ? 'border-gray-100': 'border-white/5'
@@ -69,7 +68,6 @@ export default function SettingsPanel({ light, membership, onToggleLight, onOpen
             <SubscriptionTab
               light={light}
               membership={membership}
-              onSubscribePlan={onSubscribePlan}
               onOpenPlansModal={onOpenPlansModal}
             />
           </div>

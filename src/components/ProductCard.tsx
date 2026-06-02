@@ -289,7 +289,8 @@ export default function ProductCard({
             )}
           </div>
 
-          {/* ── Spinner — only shown after Cart or Buy tapped ── */}
+          {/* ── Spinner + buttons pinned to bottom ── */}
+          <div className="mt-auto flex flex-col gap-2">
           {spinnerActive && (
             <div className={`flex items-center gap-2 ${qtyBox} border rounded-2xl px-2 py-1.5`}>
               {/* − */}
@@ -360,6 +361,7 @@ export default function ProductCard({
               <Zap size={11} strokeWidth={2.5} /> Buy
             </button>
           </div>
+          </div>{/* end mt-auto wrapper */}
 
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, X, PartyPopper } from 'lucide-react'
+import { Search, X, PartyPopper, ChevronRight } from 'lucide-react'
 import type { CartItem, Product, UserProfile, MembershipPlan } from './types'
 import { useStore } from './store'
 import Header            from './components/Header'
@@ -8,8 +8,9 @@ import ProductCard       from './components/ProductCard'
 import CartSidebar       from './components/CartSidebar'
 import Footer            from './components/Footer'
 import BottomNav         from './components/BottomNav'
-import SettingsPanel     from './components/SettingsPanel'
-import { PLANS, PLAN_ICONS } from './components/SubscriptionTab'
+import SettingsPanel           from './components/SettingsPanel'
+import { PLANS, PLAN_ICONS }  from './components/SubscriptionTab'
+import SubscriptionPlansPanel from './components/SubscriptionPlansPanel'
 import StoreLocator      from './components/StoreLocator'
 import ProfilePanel      from './components/ProfilePanel'
 import BarcodeScanner    from './components/BarcodeScanner'
@@ -286,6 +287,56 @@ export default function App() {
           <CategoryFilter active={category} categories={allCats} onChange={setCategory} light={light} />
         </div>
 
+        {/* Subscription info box */}
+        {(() => {
+          const plan     = PLANS.find(p => p.plan === user.membership)!
+          const Icon     = PLAN_ICONS[user.membership]
+          const nextPlan = user.membership === 'Free' ? PLANS[1] : user.membership === 'Pro' ? PLANS[2] : null
+          const headerColors: Record<MembershipPlan, string> = {
+            Free: '#085041', Pro: '#c2410c', Max: '#4c1d95',
+          }
+          return (
+            <button
+              type="button"
+              onClick={() => setShowPlansModal(true)}
+              className={`w-full mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-[.99] border ${
+                light ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-800/80 border-slate-700/50'
+              }`}
+            >
+              {/* Plan icon */}
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: headerColors[user.membership] }}>
+                <Icon size={18} className="text-white" strokeWidth={2} />
+              </div>
+
+              {/* Plan info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className={`text-xs font-bold ${plan.accentText}`}>{plan.label} Plan</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${plan.accentText} ${light ? plan.accentBg : plan.accentBgDark}`}>
+                    Active
+                  </span>
+                </div>
+                <p className={`text-[11px] truncate ${light ? 'text-gray-500' : 'text-slate-400'}`}>
+                  {plan.perks.slice(0, 2).join(' · ')}
+                </p>
+              </div>
+
+              {/* CTA */}
+              <div className="shrink-0 flex flex-col items-end gap-0.5">
+                {nextPlan ? (
+                  <>
+                    <span className="text-[11px] text-amber-500 font-bold">Upgrade</span>
+                    <span className={`text-[10px] ${light ? 'text-gray-400' : 'text-slate-500'}`}>to {nextPlan.label}</span>
+                  </>
+                ) : (
+                  <span className="text-[11px] text-amber-500 font-bold">View plans</span>
+                )}
+              </div>
+              <ChevronRight size={14} className={light ? 'text-gray-300' : 'text-slate-600'} strokeWidth={2.5} />
+            </button>
+          )
+        })()}
+
         {/* Count */}
         <div className="mb-4">
           <span className={`${sub} text-xs`}>
@@ -346,7 +397,6 @@ export default function App() {
           onToggleLight={() => setLight(l => !l)}
           onOpenAdmin={() => { setShowSettings(false); setAdminMode(true) }}
           onOpenProfile={() => { setShowSettings(false); setShowProfile(true) }}
-          onSubscribePlan={handleSubscribePlan}
           onClose={() => setShowSettings(false)}
           onOpenPlansModal={() => { setShowSettings(false); setShowPlansModal(true) }}
           onOpenStoreLocator={() => { setShowSettings(false); setShowLocator(true) }}
@@ -355,44 +405,14 @@ export default function App() {
         />
       )}
 
-      {/* Plans modal (centered) */}
+      {/* Subscription plans panel */}
       {showPlansModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-xl" onClick={() => setShowPlansModal(false)} />
-          <div className="relative w-full max-w-3xl mx-4">
-            <button onClick={() => setShowPlansModal(false)} className="absolute top-3 right-3 z-10 w-9 h-9 rounded-lg bg-slate-800/70 text-slate-200 flex items-center justify-center backdrop-blur-sm">
-              <X size={16} strokeWidth={2.5} />
-            </button>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-3 sm:p-5">
-              {PLANS.map(p => {
-                const Icon = PLAN_ICONS[p.plan]
-                const active = p.plan === user.membership
-                return (
-                  <div key={p.plan} className={`rounded-3xl overflow-hidden shadow-xl shadow-black/30 transition-all duration-300 min-h-[25rem] ${active ? 'bg-slate-900/90 ring-2 ring-amber-500/30 hover:-translate-y-1 hover:shadow-2xl' : 'bg-slate-900/80 hover:-translate-y-1 hover:shadow-2xl'}`}>
-                    <div className={`${p.headerBg} px-4 py-7 text-center`}>
-                      <div className={`w-12 h-12 rounded-full ${p.iconBg} flex items-center justify-center mx-auto mb-3`}>
-                        <Icon size={22} className="text-white" strokeWidth={2} />
-                      </div>
-                      <p className="text-white text-lg font-black uppercase tracking-widest" style={{ fontFamily: 'Syne, sans-serif' }}>{p.label}</p>
-                    </div>
-                    <div className="px-4 py-5">
-                      <div className={`text-2xl font-black ${p.accentText}`}>₱{p.amount}</div>
-                      <ul className="mt-3 space-y-2 text-sm text-slate-300">
-                        {p.perks.map(perk => (
-                          <li key={perk} className="flex items-start gap-2">
-                            <span className={`w-2.5 h-2.5 rounded-full mt-1 ${p.accentText.replace('text-', 'bg-')}`} />
-                            {perk}
-                          </li>
-                        ))}
-                      </ul>
-                      <button onClick={() => { handleSubscribePlan(p.plan); setShowPlansModal(false) }} className={`mt-4 w-full py-3 rounded-xl text-sm font-bold text-white ${active ? 'bg-white/10' : p.btnBg}`}>{active ? 'Current plan' : 'Select'}</button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
+        <SubscriptionPlansPanel
+          membership={user.membership}
+          light={light}
+          onSubscribePlan={plan => { handleSubscribePlan(plan); setShowPlansModal(false) }}
+          onClose={() => setShowPlansModal(false)}
+        />
       )}
 
       {/* Wallet top-up */}
