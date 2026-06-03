@@ -287,56 +287,6 @@ export default function App() {
           <CategoryFilter active={category} categories={allCats} onChange={setCategory} light={light} />
         </div>
 
-        {/* Subscription info box */}
-        {(() => {
-          const plan     = PLANS.find(p => p.plan === user.membership)!
-          const Icon     = PLAN_ICONS[user.membership]
-          const nextPlan = user.membership === 'Free' ? PLANS[1] : user.membership === 'Pro' ? PLANS[2] : null
-          const headerColors: Record<MembershipPlan, string> = {
-            Free: '#085041', Pro: '#c2410c', Max: '#4c1d95',
-          }
-          return (
-            <button
-              type="button"
-              onClick={() => setShowPlansModal(true)}
-              className={`w-full mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-[.99] border ${
-                light ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-800/80 border-slate-700/50'
-              }`}
-            >
-              {/* Plan icon */}
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: headerColors[user.membership] }}>
-                <Icon size={18} className="text-white" strokeWidth={2} />
-              </div>
-
-              {/* Plan info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className={`text-xs font-bold ${plan.accentText}`}>{plan.label} Plan</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${plan.accentText} ${light ? plan.accentBg : plan.accentBgDark}`}>
-                    Active
-                  </span>
-                </div>
-                <p className={`text-[11px] truncate ${light ? 'text-gray-500' : 'text-slate-400'}`}>
-                  {plan.perks.slice(0, 2).join(' · ')}
-                </p>
-              </div>
-
-              {/* CTA */}
-              <div className="shrink-0 flex flex-col items-end gap-0.5">
-                {nextPlan ? (
-                  <>
-                    <span className="text-[11px] text-amber-500 font-bold">Upgrade</span>
-                    <span className={`text-[10px] ${light ? 'text-gray-400' : 'text-slate-500'}`}>to {nextPlan.label}</span>
-                  </>
-                ) : (
-                  <span className="text-[11px] text-amber-500 font-bold">View plans</span>
-                )}
-              </div>
-              <ChevronRight size={14} className={light ? 'text-gray-300' : 'text-slate-600'} strokeWidth={2.5} />
-            </button>
-          )
-        })()}
-
         {/* Count */}
         <div className="mb-4">
           <span className={`${sub} text-xs`}>
