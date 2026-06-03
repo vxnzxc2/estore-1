@@ -26,7 +26,6 @@ export default function TopUpWalletModal({ amount, onConfirm, onCancel, light }:
   const unselBdr= light ? 'border-gray-200 hover:border-gray-300' : 'border-slate-700 hover:border-slate-500'
 
   const selectedPayment = PAYMENT_METHODS.find(m => m.id === method)
-  const chosenMethod = method || 'cash'
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
@@ -97,8 +96,9 @@ export default function TopUpWalletModal({ amount, onConfirm, onCancel, light }:
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(chosenMethod)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-amber-500 hover:bg-amber-400 text-white transition-colors shadow-lg shadow-amber-500/20">
+            onClick={() => onConfirm(method)}
+            disabled={!method}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-amber-500 hover:bg-amber-400 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-lg shadow-amber-500/20">
             <Check size={15} strokeWidth={3} /> Confirm Payment
           </button>
         </div>

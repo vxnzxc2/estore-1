@@ -95,11 +95,16 @@ export default function App() {
   const clearCart      = ()                          => setCart([])
 
   const buyNow = (product: Product, qty: number) => {
-    addToCart(product, qty)
-    setCartOpen(true)
-  }
+  updateStock(product.id, Math.max(0, product.stock - qty))
+  addToCart(product, qty)
+  setCartOpen(true)
+}
 
   const handlePlaceOrder = (method: string, fulfillment: string, payLaterTerm?: number) => {
+    cart.forEach(item => {
+      const current = products.find(p => p.id === item.id)
+      if (current) updateStock(item.id, Math.max(0, current.stock - item.qty))
+    })
     placeOrder(cart, method, fulfillment, payLaterTerm)
     const cartTotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0)
     const earnedPoints = Math.floor(cartTotal / 100)

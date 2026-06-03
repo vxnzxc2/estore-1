@@ -14,7 +14,7 @@ export function useStore() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
 
   const addProduct    = useCallback((p: Omit<Product, 'id'>) => setProducts(prev => [...prev, { ...p, id: nextId++ }]), [])
-  const updateStock   = useCallback((id: number, stock: number) => setProducts(prev => prev.map(p => p.id === id ? { ...p, stock } : p)), [])
+  const updateStock = useCallback((id: number, stock: number) => setProducts(prev => prev.map(p => p.id === id ? { ...p, stock } : p)), [])
   const removeProduct = useCallback((id: number) => setProducts(prev => prev.filter(p => p.id !== id)), [])
   const addCategory   = useCallback((name: string) => setCategories(prev => prev.includes(name) ? prev : [...prev, name]), [])
   const removeCategory= useCallback((name: string) => {
