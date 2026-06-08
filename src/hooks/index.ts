@@ -118,5 +118,5 @@ wss.on('connection', async (ws) => {
 })
 
 initDB().then(() => {
-  server.listen(3001, '0.0.0.0', () => console.log('[Server] http://localhost:3001'))
+  server.listen(3002, () => console.log('[Server] http://localhost:3002'))
 })

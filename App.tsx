@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { Search, X, PartyPopper } from 'lucide-react'
 import type { CartItem, Product, UserProfile, MembershipPlan } from './types'
 import { useStore } from './store'
-import { useStockSync } from './hooks/useStockSync'
 import Header                 from './components/Header'
 import CategoryFilter         from './components/CategoryFilter'
 import ProductCard            from './components/ProductCard'
@@ -23,14 +22,13 @@ import LoginPage              from './admin/LoginPage'
 import AdminPanel             from './admin/AdminPanel'
 import SupportAbout           from './components/SupportAbout'
 import TopUpWalletModal       from './components/TopUpWalletModal'
-import AdvanceOrderModal      from './components/AdvanceOrderModal'
+import { useStockSync }       from './hooks/useStockSync'
 
 export default function App() {
   const {
-    products, categories, orders, announcements, advanceOrders,
+    products, categories, orders, announcements,
     addProduct, updateStock, removeProduct, updateProduct,
     addCategory, removeCategory, placeOrder, cancelOrder,
-    placeAdvanceOrder, payAdvanceDeposit, cancelAdvanceOrder,
     addAnnouncement, removeAnnouncement,
   } = useStore()
 
@@ -47,7 +45,6 @@ export default function App() {
   const [showProfile,       setShowProfile]       = useState(false)
   const [showSupport,       setShowSupport]       = useState(false)
   const [walletTopUpAmount, setWalletTopUpAmount] = useState<number | null>(null)
-  const [showAdvanceOrder,  setShowAdvanceOrder]  = useState(false)
   const [user,              setUser]              = useState<UserProfile>({
     id: 'user-1',
     name: 'Ana Reyes',
@@ -67,15 +64,28 @@ export default function App() {
   const [searchFocus,       setSearchFocus]       = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const { pushStockUpdate } = useStockSync(products, (id, stock) => {
-    updateStock(id, stock)
-  })
-
+  // ── Live clock ────────────────────────────────────────────────────────────
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
 
+  // ── Real-time stock sync via WebSocket ────────────────────────────────────
+  const { pushStockUpdate } = useStockSync(products, (id, stock) => {
+    updateStock(id, stock)
+  })
+
+  // ── Load real stock from DB on startup (overrides data.ts defaults) ───────
+  useEffect(() => {
+    fetch('http://localhost:3001/api/stock')
+      .then(r => r.json())
+      .then((rows: { id: number; stock: number }[]) => {
+        rows.forEach(row => updateStock(row.id, row.stock))
+      })
+      .catch(() => {})
+  }, [])
+
+  // ── Cart helpers ──────────────────────────────────────────────────────────
   const addToCart = (product: Product, qty: number = 1) =>
     setCart(prev => {
       const ex = prev.find(i => i.id === product.id)
@@ -110,6 +120,7 @@ export default function App() {
   }
 
   const handlePlaceOrder = (method: string, fulfillment: string, payLaterTerm?: number) => {
+    // Deduct stock locally + push to DB
     cart.forEach(item => {
       const current = products.find(p => p.id === item.id)
       if (current) {
@@ -119,22 +130,9 @@ export default function App() {
       }
     })
 
-    const orderId     = `ORD-${Date.now()}`
-    const cartTotal   = cart.reduce((sum, i) => sum + i.price * i.qty, 0)
-    const deliveryFee = fulfillment === 'pickup' ? 0 : cartTotal >= 1000 ? 0 : 50
-
-    fetch('http://localhost:3001/api/orders', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: orderId, items: cart, total: cartTotal, deliveryFee,
-        grandTotal: cartTotal + deliveryFee, placedAt: new Date().toISOString(),
-        status: 'completed', method, fulfillment,
-      }),
-    }).catch(() => {})
-
     placeOrder(cart, method, fulfillment, payLaterTerm)
 
+    const cartTotal    = cart.reduce((sum, i) => sum + i.price * i.qty, 0)
     const earnedPoints = Math.floor(cartTotal / 100)
     if (earnedPoints > 0) {
       setUser(prev => ({ ...prev, points: prev.points + earnedPoints }))
@@ -150,29 +148,6 @@ export default function App() {
     setShowActivity(true)
     setTimeout(() => setOrderPlaced(false), 3500)
   }
-
-  const handlePlaceAdvanceOrder = (order: Parameters<typeof placeAdvanceOrder>[0]) => {
-    placeAdvanceOrder(order)
-    setShowAdvanceOrder(false)
-    setShowActivity(true)
-  }
-
-  const handlePayAdvanceDeposit = (id: string) => {
-    const order = advanceOrders.find(o => o.id === id)
-    if (order) {
-      order.items.forEach(item => {
-        const current = products.find(p => p.id === item.id)
-        if (current) {
-          const newStock = Math.max(0, current.stock - item.qty)
-          updateStock(item.id, newStock)
-          pushStockUpdate(item.id, newStock)
-        }
-      })
-    }
-    payAdvanceDeposit(id)
-  }
-
-  const handleCancelAdvanceOrder = (id: string) => cancelAdvanceOrder(id)
 
   const handleBarcodeDetected = (barcode: string) => {
     setShowScanner(false)
@@ -213,13 +188,26 @@ export default function App() {
     })
   }
 
+  // ── Admin content ─────────────────────────────────────────────────────────
+  const adminContent = adminMode ? (
+    !loggedIn ? (
+      <LoginPage onLogin={() => setLoggedIn(true)} onCancel={() => setAdminMode(false)} light={light} />
+    ) : (
+      <AdminPanel
+        products={products} categories={categories} orders={orders} announcements={announcements}
+        onAddProduct={addProduct} onUpdateStock={updateStock}
+        onRemoveProduct={removeProduct} onUpdateProduct={updateProduct}
+        onAddCategory={addCategory} onRemoveCategory={removeCategory}
+        onAddAnnouncement={addAnnouncement} onRemoveAnnouncement={removeAnnouncement}
+        onExit={() => { setAdminMode(false); setLoggedIn(false) }}
+        light={light}
+      />
+    )
+  ) : null
+
+  // ── Derived values ────────────────────────────────────────────────────────
   const allCats  = ['All', ...categories]
   const totalQty = cart.reduce((s, i) => s + i.qty, 0)
-
-  const pendingAdvanceDeposits = advanceOrders.filter(
-    o => o.status === 'pending' && !o.depositPaid
-  ).length
-  const activityBadge = totalQty + pendingAdvanceDeposits
 
   const filtered = products.filter(p => {
     const matchCat =
@@ -241,22 +229,7 @@ export default function App() {
     }
   }, [search])
 
-  const adminContent = adminMode ? (
-    !loggedIn ? (
-      <LoginPage onLogin={() => setLoggedIn(true)} onCancel={() => setAdminMode(false)} light={light} />
-    ) : (
-      <AdminPanel
-        products={products} categories={categories} orders={orders} announcements={announcements}
-        onAddProduct={addProduct} onUpdateStock={updateStock}
-        onRemoveProduct={removeProduct} onUpdateProduct={updateProduct}
-        onAddCategory={addCategory} onRemoveCategory={removeCategory}
-        onAddAnnouncement={addAnnouncement} onRemoveAnnouncement={removeAnnouncement}
-        onExit={() => { setAdminMode(false); setLoggedIn(false) }}
-        light={light}
-      />
-    )
-  ) : null
-
+  // ── Styles ────────────────────────────────────────────────────────────────
   const bg     = light ? 'bg-gray-50'      : 'bg-[#080c14]'
   const text   = light ? 'text-gray-900'   : 'text-white'
   const sub    = light ? 'text-gray-500'   : 'text-slate-400'
@@ -278,6 +251,7 @@ export default function App() {
             />
           )}
 
+          {/* Order toast */}
           {orderPlaced && (
             <div className="animate-fade-up fixed top-4 left-4 right-4 z-50 bg-green-500 text-white font-semibold px-5 py-3.5 rounded-2xl shadow-2xl text-sm flex items-center gap-3 max-w-sm mx-auto">
               <PartyPopper size={18} strokeWidth={2} /> Order placed! Salamat, suki! View it in Activity.
@@ -300,6 +274,7 @@ export default function App() {
               <p className={`${sub} text-xs sm:text-sm mt-0.5`}>FREE delivery on ₱1000+ · Fresh stocks daily</p>
             </div>
 
+            {/* Search */}
             <div className={`flex items-center gap-2.5 ${card} border ${border} rounded-xl px-3.5 py-2.5 mb-4 transition-all ${searchFocus ? 'ring-2 ring-amber-400/50' : ''}`}>
               <Search size={15} className={`${sub} shrink-0`} strokeWidth={2} />
               <input
@@ -319,6 +294,7 @@ export default function App() {
               )}
             </div>
 
+            {/* Search suggestions */}
             {search && filtered.length > 0 && searchFocus && (
               <div className={`mb-3 rounded-2xl border ${border} ${card} overflow-hidden shadow-xl`}>
                 {filtered.slice(0, 5).map(p => (
@@ -343,10 +319,12 @@ export default function App() {
               </div>
             )}
 
+            {/* Categories */}
             <div className="mb-4">
               <CategoryFilter active={category} categories={allCats} onChange={setCategory} light={light} />
             </div>
 
+            {/* Count */}
             <div className="mb-4">
               <span className={`${sub} text-xs`}>
                 <span className={`${text} font-semibold`}>{filtered.length}</span> product{filtered.length !== 1 ? 's' : ''}
@@ -357,6 +335,7 @@ export default function App() {
               </span>
             </div>
 
+            {/* Product grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
               {filtered.map(p => (
                 <ProductCard
@@ -388,8 +367,9 @@ export default function App() {
             <Footer light={light} />
           </main>
 
+          {/* Bottom nav */}
           <BottomNav
-            totalQty={activityBadge}
+            totalQty={totalQty}
             unreadNotifs={announcements.length}
             light={light}
             onActivity={() => setShowActivity(true)}
@@ -429,8 +409,8 @@ export default function App() {
             />
           )}
 
-          {showLocator && <StoreLocator onClose={() => setShowLocator(false)} light={light} />}
-          {showScanner && <BarcodeScanner onDetected={handleBarcodeDetected} onClose={() => setShowScanner(false)} light={light} />}
+          {showLocator    && <StoreLocator onClose={() => setShowLocator(false)} light={light} />}
+          {showScanner    && <BarcodeScanner onDetected={handleBarcodeDetected} onClose={() => setShowScanner(false)} light={light} />}
 
           {scanResult && (
             <ScanResult
@@ -445,16 +425,10 @@ export default function App() {
 
           {showActivity && (
             <ActivityScreen
-              cart={cart}
-              orders={orders}
-              advanceOrders={advanceOrders}
-              light={light}
+              cart={cart} orders={orders} light={light}
               onClose={() => setShowActivity(false)}
               onOpenCart={() => setCartOpen(true)}
               onCancelOrder={handleCancelOrder}
-              onPayDeposit={handlePayAdvanceDeposit}
-              onCancelAdvanceOrder={handleCancelAdvanceOrder}
-              onNewAdvanceOrder={() => { setShowActivity(false); setShowAdvanceOrder(true) }}
             />
           )}
 
@@ -465,9 +439,13 @@ export default function App() {
             />
           )}
 
-          {showSupport && <SupportAbout onClose={() => setShowSupport(false)} light={light} />}
+          {showSupport && (
+            <SupportAbout onClose={() => setShowSupport(false)} light={light} />
+          )}
 
-          {showCalculator && <Calculator light={light} onClose={() => setShowCalculator(false)} />}
+          {showCalculator && (
+            <Calculator light={light} onClose={() => setShowCalculator(false)} />
+          )}
 
           {cartOpen && (
             <CartSidebar
@@ -481,16 +459,6 @@ export default function App() {
               light={light}
             />
           )}
-
-          {showAdvanceOrder && (
-            <AdvanceOrderModal
-              products={products}
-              light={light}
-              onConfirm={handlePlaceAdvanceOrder}
-              onCancel={() => setShowAdvanceOrder(false)}
-            />
-          )}
-
         </div>
       )}
     </>

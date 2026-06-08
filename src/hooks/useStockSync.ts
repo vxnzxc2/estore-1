@@ -10,17 +10,19 @@ export function useStockSync(
   const ws      = useRef<WebSocket | null>(null)
   const seeded  = useRef(false)
 
-  // ── Seed DB once on first load ──────────────────────────────────────────
+  // ── Seed DB only if products don't exist yet (first run only) ──────────
   useEffect(() => {
     if (seeded.current) return
     seeded.current = true
+
+    // Only seed products that are missing — never overwrite existing stock
     fetch(`${API_URL}/stock/seed`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(
         products.map(p => ({ id: p.id, name: p.name, stock: p.stock }))
       ),
-    }).catch(() => {}) // server may not be running yet, fail silently
+    }).catch(() => {})
   }, [])
 
   // ── WebSocket connection ────────────────────────────────────────────────
@@ -37,6 +39,7 @@ export function useStockSync(
             const data = JSON.parse(e.data)
 
             if (data.type === 'STOCK_SNAPSHOT') {
+              // Apply full snapshot from DB — these are the real persisted values
               data.products.forEach((p: { id: number; stock: number }) => {
                 onStockUpdate(p.id, p.stock)
               })
@@ -63,7 +66,7 @@ export function useStockSync(
     }
   }, [])
 
-  // ── Push stock update to server (updates DB + broadcasts to all clients) ─
+  // ── Push stock update to server ─────────────────────────────────────────
   function pushStockUpdate(id: number, stock: number) {
     fetch(`${API_URL}/stock/${id}`, {
       method:  'PATCH',
