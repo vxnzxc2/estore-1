@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, ShoppingCart, ShoppingBag, Trash2, Truck, Tag, Square, CheckSquare, AlertTriangle, Check } from 'lucide-react'
 import type { CartItem as CartItemType } from '../types'
 import PaymentModal from './PaymentModal'
+import PreOrderPaymentModal from './PreOrderPaymentModal'
 
 const FREE_DELIVERY_AT = 1000
 
@@ -12,7 +13,7 @@ interface Props {
   onRemoveSelected: (ids: number[]) => void
   onClear: () => void
   onClose: () => void
-  onPlaceOrder: (method: string, fulfillment: string, payLaterTerm?: number) => void
+  onPlaceOrder: (method: string, fulfillment: string, payLaterTerm?: number, dueDays?: number) => void
   light?: boolean
 }
 
@@ -34,10 +35,12 @@ function CartItemRow({ item, selected, onSelect, onQtyChange, light }: {
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isKg) {
       const val = parseFloat(e.target.value.replace(/[^0-9.]/g, '')) || MIN
-      onQtyChange(item.id, parseFloat(Math.min(Math.max(val, MIN), item.stock).toFixed(2)))
+      const max = item.stock > 0 ? item.stock : Infinity
+      onQtyChange(item.id, parseFloat(Math.min(Math.max(val, MIN), max).toFixed(2)))
     } else {
       const raw = e.target.value.replace(/[^0-9]/g, '')
-      onQtyChange(item.id, Math.min(Math.max(1, raw === '' ? 1 : parseInt(raw)), item.stock))
+      const max = item.stock > 0 ? item.stock : Infinity
+      onQtyChange(item.id, Math.min(Math.max(1, raw === '' ? 1 : parseInt(raw)), max))
     }
   }
 
@@ -51,7 +54,14 @@ function CartItemRow({ item, selected, onSelect, onQtyChange, light }: {
           : <img src={item.image} alt={item.name} onError={() => setImgError(true)} className="w-full h-full object-cover" />}
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`font-semibold ${name} text-xs truncate`}>{item.name}</p>
+        <div className="flex items-center gap-2 mb-0.5">
+          <p className={`font-semibold ${name} text-xs truncate`}>{item.name}</p>
+          {item.isPreOrder && (
+            <span className="inline-flex items-center gap-0.5 bg-blue-500/20 text-blue-400 text-[8px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap shrink-0">
+              🔔 PRE-ORDER
+            </span>
+          )}
+        </div>
         <p className={`${price} font-bold text-sm`}>₱{(item.price * item.qty).toFixed(isKg ? 2 : 0)}</p>
         <p className={`${sub} text-[10px]`}>₱{item.price} × {isKg ? `${Number(item.qty).toFixed(1)} kg` : item.qty}</p>
       </div>
@@ -61,8 +71,8 @@ function CartItemRow({ item, selected, onSelect, onQtyChange, light }: {
           className={`w-7 h-7 flex items-center justify-center ${qtyBtn} transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed`}>−</button>
         <input type="text" inputMode={isKg ? 'decimal' : 'numeric'} value={isKg ? Number(item.qty).toFixed(1) : item.qty} onChange={handleInput}
           className={`w-8 text-center font-bold text-xs bg-transparent outline-none tabular-nums ${light ? 'text-gray-800' : 'text-white'}`} />
-        <button onClick={() => onQtyChange(item.id, parseFloat(Math.min(item.qty + STEP, item.stock).toFixed(2)))}
-          disabled={item.qty >= item.stock}
+        <button onClick={() => onQtyChange(item.id, parseFloat((item.qty + STEP).toFixed(2)))}
+          disabled={item.stock > 0 && item.qty >= item.stock}
           className={`w-7 h-7 flex items-center justify-center ${qtyBtn} transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed`}>+</button>
       </div>
     </div>
@@ -95,9 +105,10 @@ function ConfirmDialog({ count, onConfirm, onCancel, light }: { count: number; o
 }
 
 export default function CartSidebar({ cart, onQtyChange, onRemoveSelected, onClear, onClose, onPlaceOrder, light }: Props) {
-  const [selected,       setSelected]       = useState<Set<number>>(new Set())
-  const [showDeleteConf, setShowDeleteConf] = useState(false)
-  const [showPayment,    setShowPayment]    = useState(false)
+  const [selected,           setSelected]           = useState<Set<number>>(new Set())
+  const [showDeleteConf,     setShowDeleteConf]     = useState(false)
+  const [showPayment,        setShowPayment]        = useState(false)
+  const [showPreOrderPayment, setShowPreOrderPayment] = useState(false)
 
   const totalQty    = cart.reduce((s, i) => s + i.qty, 0)
   const total       = cart.reduce((s, i) => s + i.price * i.qty, 0)
@@ -106,11 +117,21 @@ export default function CartSidebar({ cart, onQtyChange, onRemoveSelected, onCle
   const deliveryFee = total >= FREE_DELIVERY_AT ? 0 : 50
   const grandTotal  = total + deliveryFee
 
+  const hasPreOrders = cart.some(i => i.isPreOrder)
+  const preOrderItems = cart.filter(i => i.isPreOrder)
+  const preOrderTotal = preOrderItems.reduce((s, i) => s + i.price * i.qty, 0)
+
   const toggleSelect = (id: number) => setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
   const toggleAll    = () => setSelected(selected.size === cart.length ? new Set() : new Set(cart.map(i => i.id)))
 
   const handleDeleteSelected = () => { onRemoveSelected([...selected]); setSelected(new Set()); setShowDeleteConf(false) }
   const handleConfirmOrder   = (method: string, fulfillment: string, payLaterTerm?: number) => { setShowPayment(false); onPlaceOrder(method, fulfillment, payLaterTerm) }
+  const handlePreOrderPaymentConfirm = (method: string, dueDays: number) => {
+    setShowPreOrderPayment(false)
+    // For now, we'll use the regular place order with a marker
+    // In a real app, you'd want a separate onPlacePreOrder callback
+    onPlaceOrder(method, 'pickup', undefined, dueDays)
+  }
 
   const panel  = light ? 'bg-white'          : 'bg-[#0d1424]'
   const hdr    = light ? 'border-gray-100'   : 'border-white/5'
@@ -221,7 +242,7 @@ export default function CartSidebar({ cart, onQtyChange, onRemoveSelected, onCle
                   </span>
                 </div>
               </div>
-              <button onClick={() => setShowPayment(true)}
+              <button onClick={() => hasPreOrders ? setShowPreOrderPayment(true) : setShowPayment(true)}
                 className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-white font-semibold py-3.5 rounded-xl text-sm transition-all shadow-lg shadow-amber-500/20 active:scale-95">
                 <Check size={15} strokeWidth={3} /> Place Order
               </button>
@@ -238,7 +259,17 @@ export default function CartSidebar({ cart, onQtyChange, onRemoveSelected, onCle
         <ConfirmDialog count={selected.size} onConfirm={handleDeleteSelected} onCancel={() => setShowDeleteConf(false)} light={light} />
       )}
 
-      {showPayment && (
+      {showPreOrderPayment && (
+        <PreOrderPaymentModal
+          preOrderItems={preOrderItems}
+          total={preOrderTotal}
+          onConfirm={handlePreOrderPaymentConfirm}
+          onCancel={() => setShowPreOrderPayment(false)}
+          light={light}
+        />
+      )}
+
+      {showPayment && !hasPreOrders && (
         <PaymentModal
           total={total} grandTotal={grandTotal} deliveryFee={deliveryFee}
           onConfirm={handleConfirmOrder} onCancel={() => setShowPayment(false)} light={light}

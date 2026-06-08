@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { X, ShoppingBag, Clock, ImageOff, ChevronRight, Package, Truck, Store, CreditCard, Smartphone, Banknote, Calendar, Wallet, AlertTriangle, CheckCircle, XCircle, Ban, Timer } from 'lucide-react'
 import type { CartItem, Order } from '../types'
 import type { AdvanceOrder } from './AdvanceOrderModal'
+import OrderStatusModal from './OrderStatusModal'
 
 interface Props {
   cart: CartItem[]
@@ -264,6 +265,7 @@ function OrderRow({ order, light, onRequestCancelOrder }: {
   order: Order; light?: boolean; onRequestCancelOrder: (id: string) => void
 }) {
   const [expanded,   setExpanded]   = useState(false)
+  const [showStatus, setShowStatus] = useState(false)
   const [imgErrors,  setImgErrors]  = useState<Set<number>>(new Set())
   const sub   = light ? 'text-gray-400' : 'text-slate-400'
   const title = light ? 'text-gray-900' : 'text-white'
@@ -334,17 +336,37 @@ function OrderRow({ order, light, onRequestCancelOrder }: {
               </div>
             ))}
           </div>
+
           <div className={`mt-2 pt-2 border-t ${sepB} flex justify-between text-xs font-bold`}>
             <span className={title}>Total</span>
             <span className="text-amber-500">₱{order.grandTotal}</span>
           </div>
-          {order.status !== 'cancelled' && (
-            <div className="mt-3">
-              <button onClick={() => onRequestCancelOrder(order.id)}
-                className="w-full rounded-2xl bg-red-500/10 text-red-500 border border-red-500/15 py-2 text-sm font-semibold hover:bg-red-500/15 transition-colors">
+
+          {/* Action Buttons */}
+          <div className="mt-3 space-y-2">
+            <button
+              onClick={() => setShowStatus(true)}
+              className={`w-full rounded-2xl py-2 text-sm font-semibold border transition-colors ${
+                light
+                  ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                  : 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/15'
+              }`}
+            >
+              View Order Status
+            </button>
+            {order.status !== 'cancelled' && (
+              <button
+                onClick={() => onRequestCancelOrder(order.id)}
+                className="w-full rounded-2xl bg-red-500/10 text-red-500 border border-red-500/15 py-2 text-sm font-semibold hover:bg-red-500/15 transition-colors"
+              >
                 Cancel order
               </button>
-            </div>
+            )}
+          </div>
+
+          {/* Status Modal */}
+          {showStatus && (
+            <OrderStatusModal order={order} onClose={() => setShowStatus(false)} light={light} />
           )}
         </div>
       )}
@@ -358,7 +380,7 @@ export default function ActivityScreen({
   onClose, onOpenCart, onCancelOrder,
   onPayDeposit, onCancelAdvanceOrder, onNewAdvanceOrder,
 }: Props) {
-  const [tab,           setTab]           = useState<'history' | 'pending' | 'reservations'>('history')
+  const [tab,           setTab]           = useState<'history' | 'pending'>('history')
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null)
 
   const bg      = light ? 'bg-white'        : 'bg-[#0d1424]'
@@ -376,9 +398,6 @@ export default function ActivityScreen({
   const cartTotal = cart.reduce((s, i) => s + i.price * i.qty, 0)
   const cartQty   = cart.reduce((s, i) => s + i.qty, 0)
 
-  const activeReservations = advanceOrders.filter(o => o.status === 'pending' || o.status === 'confirmed')
-  const pendingDeposits    = advanceOrders.filter(o => o.status === 'pending' && !o.depositPaid).length
-
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
       <div className={`absolute inset-0 ${overlay} backdrop-blur-sm`} onClick={onClose} />
@@ -391,7 +410,7 @@ export default function ActivityScreen({
         <div className={`flex items-center justify-between px-5 py-4 border-b ${hdr}`}>
           <div>
             <h2 className={`font-bold ${title} text-base`} style={{ fontFamily: 'Syne, sans-serif' }}>Activity</h2>
-            <p className={`${sub} text-xs`}>Orders, reservations & cart</p>
+            <p className={`${sub} text-xs`}>Orders & cart</p>
           </div>
           <button onClick={onClose} className={`w-8 h-8 rounded-lg flex items-center justify-center ${light ? 'bg-gray-100 text-gray-500 hover:bg-gray-200' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'} transition-colors`}>
             <X size={16} strokeWidth={2.5} />
@@ -403,15 +422,6 @@ export default function ActivityScreen({
           <button onClick={() => setTab('history')}
             className={`flex-1 text-xs py-3 transition-colors ${activeTab(tab === 'history')}`}>
             History
-          </button>
-          <button onClick={() => setTab('reservations')}
-            className={`flex-1 text-xs py-3 transition-colors relative ${activeTab(tab === 'reservations')}`}>
-            Reservations
-            {pendingDeposits > 0 && (
-              <span className="absolute top-2 right-3 bg-red-500 text-white text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">
-                {pendingDeposits > 9 ? '9+' : pendingDeposits}
-              </span>
-            )}
           </button>
           <button onClick={() => setTab('pending')}
             className={`flex-1 text-xs py-3 transition-colors ${activeTab(tab === 'pending')}`}>
@@ -437,76 +447,6 @@ export default function ActivityScreen({
                 ))}
               </div>
             )
-          )}
-
-          {/* ── Reservations tab ── */}
-          {tab === 'reservations' && (
-            <div className="px-4 py-4 space-y-3">
-              {/* New advance order button */}
-              <button
-                onClick={() => { onClose(); onNewAdvanceOrder() }}
-                className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold border-2 border-dashed transition-colors ${
-                  light
-                    ? 'border-purple-200 text-purple-600 hover:bg-purple-50'
-                    : 'border-purple-500/30 text-purple-400 hover:bg-purple-500/5'
-                }`}>
-                <Calendar size={15} strokeWidth={2} />
-                New Advance Order
-              </button>
-
-              {/* Stats row */}
-              {advanceOrders.length > 0 && (
-                <div className={`grid grid-cols-3 gap-2`}>
-                  {[
-                    { label: 'Active',    value: activeReservations.length,                                            color: 'text-purple-500' },
-                    { label: 'Unpaid',    value: pendingDeposits,                                                      color: 'text-red-500'    },
-                    { label: 'Confirmed', value: advanceOrders.filter(o => o.status === 'confirmed').length,            color: 'text-green-500'  },
-                  ].map(s => (
-                    <div key={s.label} className={`rounded-xl p-2.5 text-center border ${light ? 'bg-white border-gray-200' : 'bg-slate-800/60 border-white/5'}`}>
-                      <p className={`text-lg font-bold ${s.color}`} style={{ fontFamily: 'Syne, sans-serif' }}>{s.value}</p>
-                      <p className={`text-[10px] ${sub}`}>{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Active reservations */}
-              {activeReservations.length > 0 && (
-                <>
-                  <p className={`text-[10px] font-semibold ${sub} uppercase tracking-wider`}>Active</p>
-                  {activeReservations
-                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                    .map(order => (
-                      <AdvanceOrderCard key={order.id} order={order} light={light}
-                        onPayDeposit={onPayDeposit} onCancelAdvanceOrder={onCancelAdvanceOrder} />
-                    ))
-                  }
-                </>
-              )}
-
-              {/* Past reservations */}
-              {advanceOrders.filter(o => o.status === 'cancelled' || o.status === 'completed').length > 0 && (
-                <>
-                  <p className={`text-[10px] font-semibold ${sub} uppercase tracking-wider pt-1`}>Past</p>
-                  {advanceOrders
-                    .filter(o => o.status === 'cancelled' || o.status === 'completed')
-                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                    .map(order => (
-                      <AdvanceOrderCard key={order.id} order={order} light={light}
-                        onPayDeposit={onPayDeposit} onCancelAdvanceOrder={onCancelAdvanceOrder} />
-                    ))
-                  }
-                </>
-              )}
-
-              {advanceOrders.length === 0 && (
-                <div className="flex flex-col items-center py-12 gap-3 text-center">
-                  <Calendar size={40} strokeWidth={1} className={light ? 'text-gray-300' : 'text-slate-700'} />
-                  <p className={`font-semibold ${sub} text-sm`}>No reservations yet</p>
-                  <p className={`${sub} text-xs`}>Advance orders let you reserve items and pay 50% deposit to secure them</p>
-                </div>
-              )}
-            </div>
           )}
 
           {/* ── Pending (cart) tab ── */}

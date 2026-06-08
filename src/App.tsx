@@ -27,10 +27,11 @@ import AdvanceOrderModal      from './components/AdvanceOrderModal'
 
 export default function App() {
   const {
-    products, categories, orders, announcements, advanceOrders,
+    products, categories, orders, announcements, advanceOrders, preOrders,
     addProduct, updateStock, removeProduct, updateProduct,
     addCategory, removeCategory, placeOrder, cancelOrder,
     placeAdvanceOrder, payAdvanceDeposit, cancelAdvanceOrder,
+    placePreOrder, cancelPreOrder,
     addAnnouncement, removeAnnouncement,
   } = useStore()
 
@@ -76,11 +77,14 @@ export default function App() {
     return () => clearInterval(t)
   }, [])
 
-  const addToCart = (product: Product, qty: number = 1) =>
+  const addToCart = (product: Product, qty: number = 1, isPreOrder: boolean = false) =>
     setCart(prev => {
       const ex = prev.find(i => i.id === product.id)
-      if (ex) return prev.map(i => i.id === product.id ? { ...i, qty: Math.min(i.qty + qty, product.stock) } : i)
-      return [...prev, { ...product, qty: Math.min(qty, product.stock) }]
+      if (ex) {
+        const newQty = product.stock === 0 ? ex.qty + qty : Math.min(i.qty + qty, product.stock)
+        return prev.map(i => i.id === product.id ? { ...i, qty: newQty, isPreOrder: isPreOrder || i.isPreOrder } : i)
+      }
+      return [...prev, { ...product, qty, isPreOrder }]
     })
 
   const setQty = (id: number, qty: number) =>
@@ -109,10 +113,30 @@ export default function App() {
     setCartOpen(true)
   }
 
-  const handlePlaceOrder = (method: string, fulfillment: string, payLaterTerm?: number) => {
-    cart.forEach(item => {
+  const preOrder = (product: Product, qty: number) => {
+    addToCart(product, qty, true)
+    setCartOpen(true)
+  }
+
+  const handlePlaceOrder = (method: string, fulfillment: string, payLaterTerm?: number, dueDays?: number) => {
+    const hasPreOrders = cart.some(i => i.isPreOrder)
+    const regularItems = cart.filter(i => !i.isPreOrder)
+
+    // Handle pre-orders
+    if (hasPreOrders && dueDays) {
+      placePreOrder(cart, method, dueDays)
+      setOrderPlaced(true)
+      setCart([])
+      setCartOpen(false)
+      setShowActivity(true)
+      setTimeout(() => setOrderPlaced(false), 3500)
+      return
+    }
+
+    // Handle regular orders
+    regularItems.forEach(item => {
       const current = products.find(p => p.id === item.id)
-      if (current) {
+      if (current && current.stock > 0) {
         const newStock = Math.max(0, current.stock - item.qty)
         updateStock(item.id, newStock)
         pushStockUpdate(item.id, newStock)
@@ -120,20 +144,20 @@ export default function App() {
     })
 
     const orderId     = `ORD-${Date.now()}`
-    const cartTotal   = cart.reduce((sum, i) => sum + i.price * i.qty, 0)
+    const cartTotal   = regularItems.reduce((sum, i) => sum + i.price * i.qty, 0)
     const deliveryFee = fulfillment === 'pickup' ? 0 : cartTotal >= 1000 ? 0 : 50
 
     fetch('http://localhost:3001/api/orders', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        id: orderId, items: cart, total: cartTotal, deliveryFee,
+        id: orderId, items: regularItems, total: cartTotal, deliveryFee,
         grandTotal: cartTotal + deliveryFee, placedAt: new Date().toISOString(),
         status: 'completed', method, fulfillment,
       }),
     }).catch(() => {})
 
-    placeOrder(cart, method, fulfillment, payLaterTerm)
+    placeOrder(regularItems, method, fulfillment, payLaterTerm)
 
     const earnedPoints = Math.floor(cartTotal / 100)
     if (earnedPoints > 0) {
@@ -367,6 +391,7 @@ export default function App() {
                   onBuyNow={buyNow}
                   onRemove={removeItem}
                   onQtyChange={setQty}
+                  onPreOrder={preOrder}
                   light={light}
                   highlight={!!search && (
                     p.name.toLowerCase().includes(search.toLowerCase()) ||

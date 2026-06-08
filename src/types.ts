@@ -37,6 +37,7 @@ export interface Product {
 
 export interface CartItem extends Product {
   qty: number
+  isPreOrder?: boolean
 }
 
 export interface OrderItem {
@@ -59,6 +60,22 @@ export interface Order {
   method?: string
   fulfillment?: string
   payLaterTerm?: number
+  orderStatus?: 'pending' | 'processing' | 'shipped' | 'delivered'
+  processingAt?: string
+  shippedAt?: string
+  deliveredAt?: string
+}
+
+export interface PreOrder {
+  id: string
+  items: OrderItem[]
+  total: number
+  downPayment: number
+  paymentMethod: string
+  status: 'pending' | 'paid' | 'cancelled'
+  dueDate: string
+  createdAt: string
+  paidAt?: string
 }
 
 export interface Announcement {

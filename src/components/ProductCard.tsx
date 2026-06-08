@@ -2,6 +2,7 @@ import { useState } from 'react'
 import * as LucideIcons from 'lucide-react'
 import { ShoppingCart, TriangleAlert, ImageOff, Plus, Minus, Zap, X } from 'lucide-react'
 import type { Product } from '../types'
+import PreOrderModal from './PreOrderModal'
 
 interface Props {
   product: Product
@@ -10,19 +11,21 @@ interface Props {
   onBuyNow: (product: Product, qty: number) => void
   onRemove: (id: number) => void
   onQtyChange: (id: number, qty: number) => void
+  onPreOrder?: (product: Product, qty: number) => void
   onLog?: (msg: string) => void
   light?: boolean
   highlight?: boolean
 }
 
 export default function ProductCard({
-  product, qty, onAdd, onBuyNow, onRemove, onQtyChange, onLog, light, highlight,
+  product, qty, onAdd, onBuyNow, onRemove, onQtyChange, onPreOrder, onLog, light, highlight,
 }: Props) {
-  const [imgError,      setImgError]      = useState(false)
-  const [showDetail,    setShowDetail]    = useState(false)
-  const [spinnerActive, setSpinnerActive] = useState(false)
-  const [localQty,      setLocalQty]      = useState(1)
-  const [draft,         setDraft]         = useState<string | null>(null)
+  const [imgError,        setImgError]        = useState(false)
+  const [showDetail,      setShowDetail]      = useState(false)
+  const [spinnerActive,   setSpinnerActive]   = useState(false)
+  const [localQty,        setLocalQty]        = useState(1)
+  const [draft,           setDraft]           = useState<string | null>(null)
+  const [showPreOrder,    setShowPreOrder]    = useState(false)
 
   const isKg = product.stockUnit === 'kg'
   const STEP = isKg ? 0.1 : 1
@@ -330,41 +333,66 @@ export default function ProductCard({
             </div>
           )}
 
-          {/* ── Cart + Buy buttons ── */}
-          <div className="flex gap-1.5">
-            {/* Cart button */}
+          {/* ── Cart + Buy buttons or Pre-Order button ── */}
+          {isOut ? (
             <button
-              onClick={spinnerActive ? commitToCart : handleCartBtnClick}
-              disabled={isOut || (!spinnerActive && isMaxed)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 ${
-                spinnerActive
-                  ? 'bg-green-500 hover:bg-green-400 text-white shadow-md shadow-green-500/20'
-                  : 'bg-amber-500 hover:bg-amber-400 text-white shadow-md shadow-amber-500/20'
-              }`}
+              onClick={() => setShowPreOrder(true)}
+              disabled={!onPreOrder}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-xs font-semibold transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ShoppingCart size={11} strokeWidth={2.5} />
-              {spinnerActive ? 'Add to Cart' : 'Cart'}
+              Pre-Order Now
             </button>
+          ) : (
+            <div className="flex gap-1.5">
+              {/* Cart button */}
+              <button
+                onClick={spinnerActive ? commitToCart : handleCartBtnClick}
+                disabled={!spinnerActive && isMaxed}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 ${
+                  spinnerActive
+                    ? 'bg-green-500 hover:bg-green-400 text-white shadow-md shadow-green-500/20'
+                    : 'bg-amber-500 hover:bg-amber-400 text-white shadow-md shadow-amber-500/20'
+                }`}
+              >
+                <ShoppingCart size={11} strokeWidth={2.5} />
+                {spinnerActive ? 'Add to Cart' : 'Cart'}
+              </button>
 
-            {/* Buy button */}
-            <button
-              onClick={handleBuyBtnClick}
-              disabled={isOut}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl text-xs font-semibold transition-all disabled:opacity-40 active:scale-95 ${
-                spinnerActive && !isOut
-                  ? 'bg-amber-500 hover:bg-amber-400 text-white shadow-md shadow-amber-500/20'
-                  : light
-                    ? 'bg-slate-800 hover:bg-slate-700 text-white'
-                    : 'bg-slate-600 hover:bg-slate-500 text-white'
-              }`}
-            >
-              <Zap size={11} strokeWidth={2.5} /> Buy
-            </button>
-          </div>
+              {/* Buy button */}
+              <button
+                onClick={handleBuyBtnClick}
+                className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl text-xs font-semibold transition-all active:scale-95 ${
+                  spinnerActive
+                    ? 'bg-amber-500 hover:bg-amber-400 text-white shadow-md shadow-amber-500/20'
+                    : light
+                      ? 'bg-slate-800 hover:bg-slate-700 text-white'
+                      : 'bg-slate-600 hover:bg-slate-500 text-white'
+                }`}
+              >
+                <Zap size={11} strokeWidth={2.5} /> Buy
+              </button>
+            </div>
+          )}
           </div>{/* end mt-auto wrapper */}
 
         </div>
       </div>
+
+      {/* ── Pre-Order Modal ───────────────────────────────────────────────── */}
+      {showPreOrder && (
+        <PreOrderModal
+          product={product}
+          light={light}
+          onConfirm={(p, preOrderQty) => {
+            if (onPreOrder) {
+              onPreOrder(p, preOrderQty)
+            }
+            setShowPreOrder(false)
+          }}
+          onCancel={() => setShowPreOrder(false)}
+        />
+      )}
 
       {/* ── Detail Modal ──────────────────────────────────────────────────── */}
       {showDetail && (
@@ -476,37 +504,48 @@ export default function ProductCard({
               </p>
 
               {/* Modal action buttons */}
-              <div className="flex gap-2">
-                {!inCart ? (
+              {isOut ? (
+                <button
+                  onClick={() => {
+                    setShowDetail(false)
+                    setShowPreOrder(true)
+                  }}
+                  disabled={!onPreOrder}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ShoppingCart size={15} strokeWidth={2.5} /> Pre-Order Now
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  {!inCart ? (
+                    <button
+                      onClick={() => { commitToCart(); setShowDetail(false) }}
+                      className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-500/20"
+                    >
+                      <ShoppingCart size={15} strokeWidth={2.5} /> Add to Cart
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { onRemove(product.id); setShowDetail(false) }}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold ${
+                        light
+                          ? 'bg-red-50 border border-red-200 text-red-500 hover:bg-red-100'
+                          : 'bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20'
+                      }`}
+                    >
+                      Remove from Cart
+                    </button>
+                  )}
                   <button
-                    onClick={() => { commitToCart(); setShowDetail(false) }}
-                    disabled={isOut}
-                    className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold bg-amber-500 hover:bg-amber-400 text-white disabled:opacity-40 shadow-lg shadow-amber-500/20"
-                  >
-                    <ShoppingCart size={15} strokeWidth={2.5} /> Add to Cart
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => { onRemove(product.id); setShowDetail(false) }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold ${
-                      light
-                        ? 'bg-red-50 border border-red-200 text-red-500 hover:bg-red-100'
-                        : 'bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20'
+                    onClick={() => { handleBuyBtnClick(); setShowDetail(false) }}
+                    className={`flex items-center gap-2 px-5 py-3.5 rounded-xl text-sm font-semibold ${
+                      light ? 'bg-slate-800 text-white' : 'bg-slate-600 text-white'
                     }`}
                   >
-                    Remove from Cart
+                    <Zap size={15} strokeWidth={2.5} /> Buy
                   </button>
-                )}
-                <button
-                  onClick={() => { handleBuyBtnClick(); setShowDetail(false) }}
-                  disabled={isOut}
-                  className={`flex items-center gap-2 px-5 py-3.5 rounded-xl text-sm font-semibold disabled:opacity-40 ${
-                    light ? 'bg-slate-800 text-white' : 'bg-slate-600 text-white'
-                  }`}
-                >
-                  <Zap size={15} strokeWidth={2.5} /> Buy
-                </button>
-              </div>
+                </div>
+              )}
 
             </div>
           </div>
