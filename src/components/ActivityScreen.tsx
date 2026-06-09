@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X, ShoppingBag, Clock, ImageOff, ChevronRight, Package, Truck, Store, CreditCard, Smartphone, Banknote, Calendar, Wallet, AlertTriangle, CheckCircle, XCircle, Ban, Timer } from 'lucide-react'
-import type { CartItem, Order } from '../types'
+import type { CartItem, Order, PreOrder } from '../types'
 import type { AdvanceOrder } from './AdvanceOrderModal'
 import OrderStatusModal from './OrderStatusModal'
 
@@ -8,6 +8,7 @@ interface Props {
   cart: CartItem[]
   orders: Order[]
   advanceOrders: AdvanceOrder[]
+  preOrders?: PreOrder[]
   light?: boolean
   onClose: () => void
   onOpenCart: () => void
@@ -376,11 +377,11 @@ function OrderRow({ order, light, onRequestCancelOrder }: {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function ActivityScreen({
-  cart, orders, advanceOrders, light,
+  cart, orders, advanceOrders, preOrders = [], light,
   onClose, onOpenCart, onCancelOrder,
   onPayDeposit, onCancelAdvanceOrder, onNewAdvanceOrder,
 }: Props) {
-  const [tab,           setTab]           = useState<'history' | 'pending'>('history')
+  const [tab,           setTab]           = useState<'history' | 'pending' | 'advance' | 'preorder'>('history')
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null)
 
   const bg      = light ? 'bg-white'        : 'bg-[#0d1424]'
@@ -417,15 +418,23 @@ export default function ActivityScreen({
           </button>
         </div>
 
-        {/* Tabs — now 3 tabs */}
-        <div className={`flex border-b ${hdr} shrink-0`}>
+        {/* Tabs — now 4 tabs */}
+        <div className={`flex border-b ${hdr} shrink-0 overflow-x-auto`}>
           <button onClick={() => setTab('history')}
-            className={`flex-1 text-xs py-3 transition-colors ${activeTab(tab === 'history')}`}>
+            className={`flex-1 text-xs py-3 transition-colors whitespace-nowrap ${activeTab(tab === 'history')}`}>
             History
           </button>
           <button onClick={() => setTab('pending')}
-            className={`flex-1 text-xs py-3 transition-colors ${activeTab(tab === 'pending')}`}>
+            className={`flex-1 text-xs py-3 transition-colors whitespace-nowrap ${activeTab(tab === 'pending')}`}>
             {`Pending${cartQty > 0 ? ` (${cartQty})` : ''}`}
+          </button>
+          <button onClick={() => setTab('advance')}
+            className={`flex-1 text-xs py-3 transition-colors whitespace-nowrap ${activeTab(tab === 'advance')}`}>
+            {`Advance${advanceOrders.length > 0 ? ` (${advanceOrders.length})` : ''}`}
+          </button>
+          <button onClick={() => setTab('preorder')}
+            className={`flex-1 text-xs py-3 transition-colors whitespace-nowrap ${activeTab(tab === 'preorder')}`}>
+            {`Pre-Order${preOrders.length > 0 ? ` (${preOrders.length})` : ''}`}
           </button>
         </div>
 
@@ -481,6 +490,65 @@ export default function ActivityScreen({
                     </button>
                   </div>
                 </div>
+              </div>
+            )
+          )}
+
+          {/* ── Advance Orders tab ── */}
+          {tab === 'advance' && (
+            advanceOrders.length === 0 ? (
+              <div className="flex flex-col items-center py-20 gap-3 px-5">
+                <Clock size={40} strokeWidth={1} className={light ? 'text-gray-300' : 'text-slate-700'} />
+                <p className={`font-semibold ${sub} text-sm`}>No advance orders</p>
+                <button onClick={() => { onClose(); onNewAdvanceOrder() }}
+                  className="text-amber-500 text-xs font-medium hover:underline">
+                  Create one now
+                </button>
+              </div>
+            ) : (
+              <div className="px-4 py-4">
+                {advanceOrders.map(order => (
+                  <AdvanceOrderCard key={order.id} order={order} light={light} onPayDeposit={onPayDeposit} onCancelAdvanceOrder={onCancelAdvanceOrder} />
+                ))}
+              </div>
+            )
+          )}
+
+          {/* ── Pre-Orders tab ── */}
+          {tab === 'preorder' && (
+            preOrders.length === 0 ? (
+              <div className="flex flex-col items-center py-20 gap-3 px-5">
+                <Calendar size={40} strokeWidth={1} className={light ? 'text-gray-300' : 'text-slate-700'} />
+                <p className={`font-semibold ${sub} text-sm`}>No pre-orders</p>
+                <p className={`${sub} text-xs text-center`}>Pre-order items will appear here with due dates</p>
+              </div>
+            ) : (
+              <div className={`${card} mx-4 my-4 rounded-2xl overflow-hidden`}>
+                {preOrders.map(preOrder => (
+                  <div key={preOrder.id} className={`border-b ${preOrder === preOrders[preOrders.length - 1] ? '' : hdr} last:border-0`}>
+                    <div className={`px-4 py-3 flex items-start justify-between ${light ? 'hover:bg-gray-50' : 'hover:bg-slate-700/20'} transition-colors`}>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs font-semibold ${title}`}>#{preOrder.id.slice(-6).toUpperCase()}</p>
+                        <p className={`text-[10px] ${sub} mt-1`}>
+                          Due: {new Date(preOrder.dueDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
+                        <p className={`text-[10px] ${sub} mt-0.5`}>{preOrder.items.length} item{preOrder.items.length !== 1 ? 's' : ''} · ₱{preOrder.total.toLocaleString('en-PH')}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2 ml-3">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${
+                          preOrder.status === 'pending'
+                            ? light ? 'bg-orange-50 text-orange-500' : 'bg-orange-500/10 text-orange-400'
+                            : preOrder.status === 'completed'
+                            ? light ? 'bg-green-50 text-green-500' : 'bg-green-500/10 text-green-400'
+                            : light ? 'bg-red-50 text-red-500' : 'bg-red-500/10 text-red-400'
+                        }`}>
+                          {preOrder.status.charAt(0).toUpperCase() + preOrder.status.slice(1)}
+                        </span>
+                        <CountdownTimer dueDate={preOrder.dueDate} light={light} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )
           )}

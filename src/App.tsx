@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { Search, X, PartyPopper } from 'lucide-react'
 import type { CartItem, Product, UserProfile, MembershipPlan } from './types'
 import { useStore } from './store'
-import { useStockSync } from './hooks/useStockSync'
 import Header                 from './components/Header'
 import CategoryFilter         from './components/CategoryFilter'
 import ProductCard            from './components/ProductCard'
@@ -24,6 +23,8 @@ import AdminPanel             from './admin/AdminPanel'
 import SupportAbout           from './components/SupportAbout'
 import TopUpWalletModal       from './components/TopUpWalletModal'
 import AdvanceOrderModal      from './components/AdvanceOrderModal'
+import PreOrderModal          from './components/PreOrderModal'
+import UserLoginPage          from './components/UserLoginPage'
 
 export default function App() {
   const {
@@ -43,12 +44,14 @@ export default function App() {
   const [time,              setTime]              = useState(new Date())
   const [adminMode,         setAdminMode]         = useState(false)
   const [loggedIn,          setLoggedIn]          = useState(false)
+  const [userLoggedIn,      setUserLoggedIn]      = useState(false)
   const [light,             setLight]             = useState(false)
   const [showScanner,       setShowScanner]       = useState(false)
   const [showProfile,       setShowProfile]       = useState(false)
   const [showSupport,       setShowSupport]       = useState(false)
   const [walletTopUpAmount, setWalletTopUpAmount] = useState<number | null>(null)
   const [showAdvanceOrder,  setShowAdvanceOrder]  = useState(false)
+  const [showPreOrder,      setShowPreOrder]      = useState(false)
   const [user,              setUser]              = useState<UserProfile>({
     id: 'user-1',
     name: 'Ana Reyes',
@@ -57,6 +60,7 @@ export default function App() {
     membership: 'Free',
     walletBalance: 450.25,
     points: 0,
+    role: 'buyer',
   })
   const [scanResult,        setScanResult]        = useState<{ barcode: string; product: Product | null } | null>(null)
   const [showSettings,      setShowSettings]      = useState(false)
@@ -68,9 +72,6 @@ export default function App() {
   const [searchFocus,       setSearchFocus]       = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const { pushStockUpdate } = useStockSync(products, (id, stock) => {
-    updateStock(id, stock)
-  })
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000)
@@ -81,10 +82,15 @@ export default function App() {
     setCart(prev => {
       const ex = prev.find(i => i.id === product.id)
       if (ex) {
-        const newQty = product.stock === 0 ? ex.qty + qty : Math.min(i.qty + qty, product.stock)
+        // Limit to available stock: max = product.stock - (quantity already in cart)
+        const availableToAdd = Math.max(0, product.stock - ex.qty)
+        const newQty = ex.qty + Math.min(qty, availableToAdd)
         return prev.map(i => i.id === product.id ? { ...i, qty: newQty, isPreOrder: isPreOrder || i.isPreOrder } : i)
       }
-      return [...prev, { ...product, qty, isPreOrder }]
+      // For new items, also enforce stock limit
+      const limitedQty = Math.min(qty, Math.max(0, product.stock))
+      if (limitedQty <= 0) return prev // Don't add if no stock available
+      return [...prev, { ...product, qty: limitedQty, isPreOrder }]
     })
 
   const setQty = (id: number, qty: number) =>
@@ -106,14 +112,19 @@ export default function App() {
   const clearCart      = ()              => setCart([])
 
   const buyNow = (product: Product, qty: number) => {
-    const newStock = Math.max(0, product.stock - qty)
+    // Limit to available stock
+    const quantityToBuy = Math.min(qty, Math.max(0, product.stock))
+    if (quantityToBuy <= 0) return // Can't buy if no stock
+
+    const newStock = Math.max(0, product.stock - quantityToBuy)
     updateStock(product.id, newStock)
-    pushStockUpdate(product.id, newStock)
-    addToCart(product, qty)
+    addToCart(product, quantityToBuy)
     setCartOpen(true)
   }
 
   const preOrder = (product: Product, qty: number) => {
+    // Pre-orders don't have stock limits, but still validate qty > 0
+    if (qty <= 0) return
     addToCart(product, qty, true)
     setCartOpen(true)
   }
@@ -139,7 +150,6 @@ export default function App() {
       if (current && current.stock > 0) {
         const newStock = Math.max(0, current.stock - item.qty)
         updateStock(item.id, newStock)
-        pushStockUpdate(item.id, newStock)
       }
     })
 
@@ -189,7 +199,6 @@ export default function App() {
         if (current) {
           const newStock = Math.max(0, current.stock - item.qty)
           updateStock(item.id, newStock)
-          pushStockUpdate(item.id, newStock)
         }
       })
     }
@@ -265,7 +274,8 @@ export default function App() {
     }
   }, [search])
 
-  const adminContent = adminMode ? (
+  const canAccessAdmin = user.role === 'owner' || user.role === 'employee'
+  const adminContent = adminMode && canAccessAdmin ? (
     !loggedIn ? (
       <LoginPage onLogin={() => setLoggedIn(true)} onCancel={() => setAdminMode(false)} light={light} />
     ) : (
@@ -290,7 +300,16 @@ export default function App() {
   return (
     <>
       {adminContent}
-      {!adminContent && (
+      {!adminContent && !userLoggedIn && (
+        <UserLoginPage
+          onLogin={(email, role) => {
+            setUserLoggedIn(true)
+            setUser(prev => ({ ...prev, email, role }))
+          }}
+          light={light}
+        />
+      )}
+      {!adminContent && userLoggedIn && (
         <div className={`min-h-screen ${bg} pb-28 transition-colors duration-300`}>
 
           {showProfile && (
@@ -392,6 +411,8 @@ export default function App() {
                   onRemove={removeItem}
                   onQtyChange={setQty}
                   onPreOrder={preOrder}
+                  onUpdateStock={updateStock}
+                  userRole={user.role}
                   light={light}
                   highlight={!!search && (
                     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -426,7 +447,7 @@ export default function App() {
 
           {showSettings && (
             <SettingsPanel
-              light={light} membership={user.membership}
+              light={light} membership={user.membership} userRole={user.role}
               onToggleLight={() => setLight(l => !l)}
               onOpenAdmin={() => { setShowSettings(false); setAdminMode(true) }}
               onOpenProfile={() => { setShowSettings(false); setShowProfile(true) }}
@@ -435,6 +456,7 @@ export default function App() {
               onOpenStoreLocator={() => { setShowSettings(false); setShowLocator(true) }}
               onOpenHistory={() => { setShowSettings(false); setShowActivity(true) }}
               onOpenSupport={() => { setShowSettings(false); setShowSupport(true) }}
+              onLogout={() => { setShowSettings(false); setUserLoggedIn(false) }}
             />
           )}
 
@@ -473,6 +495,7 @@ export default function App() {
               cart={cart}
               orders={orders}
               advanceOrders={advanceOrders}
+              preOrders={preOrders}
               light={light}
               onClose={() => setShowActivity(false)}
               onOpenCart={() => setCartOpen(true)}

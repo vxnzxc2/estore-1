@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LayoutDashboard, Package, Tag, LogOut, Menu, Store, ChevronRight, History, X, Megaphone } from 'lucide-react'
+import { LayoutDashboard, Package, Tag, LogOut, Menu, Store, ChevronRight, History, X, Megaphone, Users } from 'lucide-react'
 
 interface Props {
   children: React.ReactNode
@@ -16,8 +16,11 @@ interface Props {
 
 const NAV = [
   { id: 'dashboard',     label: 'Dashboard',     icon: LayoutDashboard },
+  { id: 'stock',         label: 'Stock',         icon: Package },
   { id: 'products',      label: 'Products',      icon: Package },
   { id: 'categories',    label: 'Categories',    icon: Tag },
+  { id: 'employees',     label: 'Employees',     icon: Users },
+  { id: 'buyers',        label: 'Buyers',        icon: Users },
   { id: 'history',       label: 'History',       icon: History },
   { id: 'announcements', label: 'Announcements', icon: Megaphone },
 ]
@@ -57,7 +60,7 @@ export default function AdminLayout({ children, activeTab, onTabChange, onLogout
               <Store size={16} className="text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <p className={`${titleCl} font-bold text-sm`} style={{ fontFamily: 'Syne, sans-serif' }}>Evaristo's</p>
+              <p className={`${titleCl} font-bold text-sm`} style={{ fontFamily: 'Syne, sans-serif' }}>eStore</p>
               <p className={`${subCl} text-[10px] uppercase tracking-wider`}>Admin Panel</p>
             </div>
           </div>

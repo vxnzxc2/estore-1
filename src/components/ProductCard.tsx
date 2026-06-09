@@ -13,12 +13,14 @@ interface Props {
   onQtyChange: (id: number, qty: number) => void
   onPreOrder?: (product: Product, qty: number) => void
   onLog?: (msg: string) => void
+  onUpdateStock?: (id: number, stock: number) => void
+  userRole?: 'owner' | 'employee' | 'buyer'
   light?: boolean
   highlight?: boolean
 }
 
 export default function ProductCard({
-  product, qty, onAdd, onBuyNow, onRemove, onQtyChange, onPreOrder, onLog, light, highlight,
+  product, qty, onAdd, onBuyNow, onRemove, onQtyChange, onPreOrder, onLog, onUpdateStock, userRole, light, highlight,
 }: Props) {
   const [imgError,        setImgError]        = useState(false)
   const [showDetail,      setShowDetail]      = useState(false)
@@ -26,6 +28,10 @@ export default function ProductCard({
   const [localQty,        setLocalQty]        = useState(1)
   const [draft,           setDraft]           = useState<string | null>(null)
   const [showPreOrder,    setShowPreOrder]    = useState(false)
+  const [showStockMgmt,   setShowStockMgmt]   = useState(false)
+  const [stockEdit,       setStockEdit]       = useState(String(product.stock))
+
+  const isStaff = userRole === 'owner' || userRole === 'employee'
 
   const isKg = product.stockUnit === 'kg'
   const STEP = isKg ? 0.1 : 1
@@ -235,15 +241,24 @@ export default function ProductCard({
           ) : null}
         </div>
 
-        {/* Cart qty pill top-right */}
-        {inCart && (
-          <div className="absolute top-2 right-2 z-10">
+        {/* Cart qty pill + staff stock mgmt top-right */}
+        <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end">
+          {inCart && (
             <span className="bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-lg shadow-md flex items-center gap-0.5">
               <ShoppingCart size={8} strokeWidth={3} />
               {isKg ? `${Number(qty).toFixed(1)}kg` : qty}
             </span>
-          </div>
-        )}
+          )}
+          {isStaff && (
+            <button
+              onClick={e => { e.stopPropagation(); setShowStockMgmt(true) }}
+              className="bg-blue-500 hover:bg-blue-600 text-white text-[9px] font-bold px-2 py-1 rounded-lg shadow-md flex items-center gap-1 transition-colors"
+              title="Manage stock"
+            >
+              📦 {product.stock}
+            </button>
+          )}
+        </div>
 
         {/* Image */}
         <button
@@ -295,84 +310,140 @@ export default function ProductCard({
           {/* ── Spinner + buttons pinned to bottom ── */}
           <div className="mt-auto flex flex-col gap-2">
           {spinnerActive && (
-            <div className={`flex items-center gap-2 ${qtyBox} border rounded-2xl px-2 py-1.5`}>
-              {/* − */}
-              <button onClick={spinnerDec} disabled={spinnerAtMin} className={iconBtn(spinnerAtMin)}>
-                <Minus size={13} strokeWidth={2.5} />
-              </button>
+            <>
+              <div className={`flex items-center gap-2 ${qtyBox} border rounded-2xl px-2 py-1.5`}>
+                {/* − */}
+                <button onClick={spinnerDec} disabled={spinnerAtMin} className={iconBtn(spinnerAtMin)}>
+                  <Minus size={13} strokeWidth={2.5} />
+                </button>
 
-              {/* Editable number */}
-              <div className="flex-1 flex items-center justify-center gap-0.5">
-                <input
-                  type="text"
-                  inputMode={isKg ? 'decimal' : 'numeric'}
-                  value={spinnerDisplayVal}
-                  onChange={spinnerInput}
-                  onFocus={() => setDraft(fmtQty(localQty))}
-                  onBlur={spinnerCommit}
-                  onKeyDown={e => e.key === 'Enter' && spinnerCommit()}
-                  className={`w-10 text-center text-base font-bold bg-transparent outline-none tabular-nums ${light ? 'text-gray-800' : 'text-white'}`}
-                />
-                {isKg && <span className={`text-[10px] font-medium ${sub}`}>kg</span>}
+                {/* Editable number */}
+                <div className="flex-1 flex items-center justify-center gap-0.5">
+                  <input
+                    type="text"
+                    inputMode={isKg ? 'decimal' : 'numeric'}
+                    value={spinnerDisplayVal}
+                    onChange={spinnerInput}
+                    onFocus={() => setDraft(fmtQty(localQty))}
+                    onBlur={spinnerCommit}
+                    onKeyDown={e => e.key === 'Enter' && spinnerCommit()}
+                    className={`w-10 text-center text-base font-bold bg-transparent outline-none tabular-nums ${light ? 'text-gray-800' : 'text-white'}`}
+                  />
+                  {isKg && <span className={`text-[10px] font-medium ${sub}`}>kg</span>}
+                </div>
+
+                {/* + */}
+                <button onClick={spinnerInc} disabled={spinnerMaxed || remaining <= 0} className={iconBtn(spinnerMaxed || remaining <= 0)}>
+                  <Plus size={13} strokeWidth={2.5} />
+                </button>
+
+                {/* ✕ cancel */}
+                <button
+                  onClick={cancelSpinner}
+                  className={`w-6 h-6 flex items-center justify-center rounded-full shrink-0 transition-colors ${
+                    light ? 'text-gray-300 hover:text-red-500 hover:bg-red-50' : 'text-slate-600 hover:text-red-400 hover:bg-red-500/10'
+                  }`}
+                >
+                  <X size={11} strokeWidth={2.5} />
+                </button>
               </div>
-
-              {/* + */}
-              <button onClick={spinnerInc} disabled={spinnerMaxed || remaining <= 0} className={iconBtn(spinnerMaxed || remaining <= 0)}>
-                <Plus size={13} strokeWidth={2.5} />
-              </button>
-
-              {/* ✕ cancel */}
               <button
-                onClick={cancelSpinner}
-                className={`w-6 h-6 flex items-center justify-center rounded-full shrink-0 transition-colors ${
-                  light ? 'text-gray-300 hover:text-red-500 hover:bg-red-50' : 'text-slate-600 hover:text-red-400 hover:bg-red-500/10'
-                }`}
+                onClick={commitToCart}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white font-semibold text-xs transition-colors active:scale-95 shadow-md"
               >
-                <X size={11} strokeWidth={2.5} />
+                <Plus size={13} strokeWidth={2.5} />
+                Add Product
               </button>
-            </div>
+            </>
           )}
 
-          {/* ── Cart + Buy buttons or Pre-Order button ── */}
-          {isOut ? (
-            <button
-              onClick={() => setShowPreOrder(true)}
-              disabled={!onPreOrder}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-xs font-semibold transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <ShoppingCart size={11} strokeWidth={2.5} />
-              Pre-Order Now
-            </button>
-          ) : (
-            <div className="flex gap-1.5">
-              {/* Cart button */}
-              <button
-                onClick={spinnerActive ? commitToCart : handleCartBtnClick}
-                disabled={!spinnerActive && isMaxed}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 ${
-                  spinnerActive
-                    ? 'bg-green-500 hover:bg-green-400 text-white shadow-md shadow-green-500/20'
-                    : 'bg-amber-500 hover:bg-amber-400 text-white shadow-md shadow-amber-500/20'
-                }`}
-              >
-                <ShoppingCart size={11} strokeWidth={2.5} />
-                {spinnerActive ? 'Add to Cart' : 'Cart'}
-              </button>
+          {/* ── Staff: Stock Input | Buyers: Cart + Buy buttons ── */}
+          {isStaff ? (
+            <div className="space-y-2">
+              {/* Status Badge */}
+              <div className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold ${
+                product.stock === 0
+                  ? 'bg-red-500/10 text-red-500'
+                  : product.stock <= 5
+                    ? 'bg-orange-500/10 text-orange-500'
+                    : 'bg-green-500/10 text-green-500'
+              }`}>
+                <span>{product.stock === 0 ? '❌ Out of Stock' : product.stock <= 5 ? '⚠️ Low Stock' : '✅ In Stock'}</span>
+                <span className="font-bold text-sm">{product.stock}</span>
+              </div>
 
-              {/* Buy button */}
-              <button
-                onClick={handleBuyBtnClick}
-                className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl text-xs font-semibold transition-all active:scale-95 ${
-                  spinnerActive
-                    ? 'bg-amber-500 hover:bg-amber-400 text-white shadow-md shadow-amber-500/20'
-                    : light
-                      ? 'bg-slate-800 hover:bg-slate-700 text-white'
-                      : 'bg-slate-600 hover:bg-slate-500 text-white'
-                }`}
-              >
-                <Zap size={11} strokeWidth={2.5} /> Buy
-              </button>
+              {/* Stock Input */}
+              <div className="flex gap-1.5">
+                <input
+                  type="number"
+                  min="0"
+                  step={isKg ? '0.1' : '1'}
+                  placeholder="Qty to add"
+                  value={stockEdit}
+                  onChange={e => setStockEdit(e.target.value)}
+                  className={`flex-1 border rounded-xl px-3 py-2 text-sm font-semibold text-center outline-none transition-colors ${
+                    light
+                      ? 'bg-white border-gray-300 text-gray-900'
+                      : 'bg-slate-900 border-slate-600 text-white'
+                  }`}
+                />
+                <button
+                  onClick={() => {
+                    const addQty = parseFloat(stockEdit) || 0;
+                    if (addQty > 0 && onUpdateStock) {
+                      onUpdateStock(product.id, product.stock + addQty);
+                      setStockEdit('');
+                    }
+                  }}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl text-xs transition-colors active:scale-95"
+                >
+                  <Plus size={13} strokeWidth={2.5} />
+                </button>
+              </div>
             </div>
+          ) : (
+            <>
+              {isOut ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowPreOrder(true) }}
+                  disabled={!onPreOrder}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-xs font-semibold transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ShoppingCart size={11} strokeWidth={2.5} />
+                  Pre-Order Now
+                </button>
+              ) : (
+                <div className="flex gap-1.5">
+                  {/* Cart button */}
+                  <button
+                    onClick={spinnerActive ? commitToCart : handleCartBtnClick}
+                    disabled={!spinnerActive && isMaxed}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 ${
+                      spinnerActive
+                        ? 'bg-green-500 hover:bg-green-400 text-white shadow-md shadow-green-500/20'
+                        : 'bg-amber-500 hover:bg-amber-400 text-white shadow-md shadow-amber-500/20'
+                    }`}
+                  >
+                    <ShoppingCart size={11} strokeWidth={2.5} />
+                    {spinnerActive ? 'Add to Cart' : 'Cart'}
+                  </button>
+
+                  {/* Buy button */}
+                  <button
+                    onClick={handleBuyBtnClick}
+                    className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl text-xs font-semibold transition-all active:scale-95 ${
+                      spinnerActive
+                        ? 'bg-amber-500 hover:bg-amber-400 text-white shadow-md shadow-amber-500/20'
+                        : light
+                          ? 'bg-slate-800 hover:bg-slate-700 text-white'
+                          : 'bg-slate-600 hover:bg-slate-500 text-white'
+                    }`}
+                  >
+                    <Zap size={11} strokeWidth={2.5} /> Buy
+                  </button>
+                </div>
+              )}
+            </>
           )}
           </div>{/* end mt-auto wrapper */}
 
@@ -506,7 +577,8 @@ export default function ProductCard({
               {/* Modal action buttons */}
               {isOut ? (
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation()
                     setShowDetail(false)
                     setShowPreOrder(true)
                   }}
@@ -547,6 +619,103 @@ export default function ProductCard({
                 </div>
               )}
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Stock Management Modal (Staff Only) ─────────────────────────── */}
+      {isStaff && showStockMgmt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className={`${light ? 'bg-white border border-gray-200' : 'bg-slate-800 border border-slate-700'} rounded-2xl p-6 max-w-sm w-full space-y-4`}>
+            <div>
+              <h3 className={`text-lg font-bold ${light ? 'text-gray-900' : 'text-white'}`}>
+                Manage Stock
+              </h3>
+              <p className={`text-sm ${light ? 'text-gray-500' : 'text-slate-400'} mt-1`}>
+                {product.name}
+              </p>
+            </div>
+
+            {/* Stock Display */}
+            <div className={`p-4 rounded-xl ${light ? 'bg-gray-50' : 'bg-slate-700/30'}`}>
+              <p className={`text-xs ${light ? 'text-gray-500' : 'text-slate-400'} mb-2`}>Current Stock</p>
+              <p className="text-3xl font-bold text-amber-500">{product.stock}</p>
+            </div>
+
+            {/* Quick Adjust */}
+            <div className="space-y-2">
+              <p className={`text-xs font-semibold ${light ? 'text-gray-500' : 'text-slate-400'} uppercase`}>Quick Adjust</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    if (onUpdateStock) onUpdateStock(product.id, Math.max(0, product.stock - 1));
+                  }}
+                  className={`flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1 transition-colors ${
+                    light
+                      ? 'bg-white border border-gray-300 hover:bg-gray-50'
+                      : 'bg-slate-700 border border-slate-600 hover:bg-slate-600'
+                  }`}
+                >
+                  <Minus size={16} /> 1
+                </button>
+                <button
+                  onClick={() => {
+                    if (onUpdateStock) onUpdateStock(product.id, product.stock + 1);
+                  }}
+                  className={`flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1 transition-colors ${
+                    light
+                      ? 'bg-white border border-gray-300 hover:bg-gray-50'
+                      : 'bg-slate-700 border border-slate-600 hover:bg-slate-600'
+                  }`}
+                >
+                  <Plus size={16} /> 1
+                </button>
+              </div>
+            </div>
+
+            {/* Manual Input */}
+            <div className="space-y-2">
+              <p className={`text-xs font-semibold ${light ? 'text-gray-500' : 'text-slate-400'} uppercase`}>Set Exact Quantity</p>
+              <input
+                type="number"
+                min="0"
+                value={stockEdit}
+                onChange={e => setStockEdit(e.target.value)}
+                className={`w-full border rounded-xl px-3 py-2 text-center text-lg font-bold outline-none transition-colors ${
+                  light
+                    ? 'bg-white border-gray-300 text-gray-900'
+                    : 'bg-slate-900 border-slate-600 text-white'
+                }`}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => {
+                  const newStock = parseInt(stockEdit) || 0;
+                  if (onUpdateStock) onUpdateStock(product.id, Math.max(0, newStock));
+                  setShowStockMgmt(false);
+                  setStockEdit(String(product.stock));
+                }}
+                className="flex-1 bg-amber-500 hover:bg-amber-400 text-white font-semibold py-2 rounded-xl transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => {
+                  setShowStockMgmt(false);
+                  setStockEdit(String(product.stock));
+                }}
+                className={`flex-1 border rounded-xl font-semibold py-2 transition-colors ${
+                  light
+                    ? 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    : 'border-slate-600 text-slate-400 hover:bg-slate-700'
+                }`}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

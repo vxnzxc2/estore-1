@@ -1,11 +1,12 @@
-import { X, Sun, Moon, Shield, Lock, Store, MapPin, ChevronRight, Info, History, HelpCircle, User } from 'lucide-react'
+import { X, Sun, Moon, Shield, Lock, Store, MapPin, ChevronRight, Info, History, HelpCircle, User, LogOut } from 'lucide-react'
 
-import type { MembershipPlan } from '../types'
+import type { MembershipPlan, UserRole } from '../types'
 import SubscriptionTab from './SubscriptionTab'
 
 interface Props {
   light: boolean
   membership: MembershipPlan
+  userRole: UserRole
   onToggleLight: () => void
   onOpenAdmin: () => void
   onOpenProfile: () => void
@@ -14,9 +15,10 @@ interface Props {
   onOpenStoreLocator: () => void
   onOpenHistory: () => void
   onOpenSupport: () => void
+  onLogout?: () => void
 }
 
-export default function SettingsPanel({ light, membership, onToggleLight, onOpenAdmin, onOpenProfile, onOpenPlansModal, onClose, onOpenStoreLocator, onOpenHistory, onOpenSupport }: Props) {
+export default function SettingsPanel({ light, membership, userRole, onToggleLight, onOpenAdmin, onOpenProfile, onOpenPlansModal, onClose, onOpenStoreLocator, onOpenHistory, onOpenSupport, onLogout }: Props) {
   const bg      = light ? 'bg-white'       : 'bg-[#0d1424]'
   const overlay = light ? 'bg-black/20'    : 'bg-black/60'
   const hdr     = light ? 'border-gray-100': 'border-white/5'
@@ -116,7 +118,7 @@ export default function SettingsPanel({ light, membership, onToggleLight, onOpen
                 </div>
                 <div className="flex-1 text-left">
                   <p className={`font-semibold ${title} text-sm`}>Find Nearest Store</p>
-                  <p className={`${sub} text-xs`}>Locate Evaristo's near you</p>
+                  <p className={`${sub} text-xs`}>Locate eStore near you</p>
                 </div>
                 <ChevronRight size={16} className={sub} strokeWidth={2} />
               </button>
@@ -138,7 +140,7 @@ export default function SettingsPanel({ light, membership, onToggleLight, onOpen
                   <Store size={18} className="text-amber-500" strokeWidth={2} />
                 </div>
                 <div>
-                  <p className={`font-semibold ${title} text-sm`}>Evaristo's Main Branch</p>
+                  <p className={`font-semibold ${title} text-sm`}>eStore Main Branch</p>
                   <p className={`${sub} text-xs`}>Blk 3 Lot 5, Sampaguita St., Maynila</p>
                   <p className={`${sub} text-xs`}>Open 6AM – 10PM · 0912-345-6789</p>
                 </div>
@@ -146,39 +148,62 @@ export default function SettingsPanel({ light, membership, onToggleLight, onOpen
             </div>
           </div>
 
-          {/* Admin */}
-          <div className="px-5 pt-4 pb-2">
-            <p className={`text-xs font-semibold ${sec} uppercase tracking-widest mb-3`}>Administration</p>
-            <button onClick={onOpenAdmin}
-              className={`w-full flex items-center gap-3 p-4 rounded-2xl border ${row} transition-colors`}>
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${light ? 'bg-red-50' : 'bg-red-500/10'}`}>
-                <Shield size={18} className="text-red-500" strokeWidth={2} />
-              </div>
-              <div className="flex-1 text-left">
-                <p className={`font-semibold ${title} text-sm`}>Admin Panel</p>
-                <p className={`${sub} text-xs`}>Manage products, stock & orders</p>
-              </div>
-              <div className="flex items-center gap-1">
-                <Lock size={12} className={sub} strokeWidth={2} />
-                <ChevronRight size={16} className={sub} strokeWidth={2} />
-              </div>
-            </button>
-          </div>
+          {/* Admin — Only for Owner & Employee */}
+          {(userRole === 'owner' || userRole === 'employee') && (
+            <div className="px-5 pt-4 pb-2">
+              <p className={`text-xs font-semibold ${sec} uppercase tracking-widest mb-3`}>Administration</p>
+              <button onClick={onOpenAdmin}
+                className={`w-full flex items-center gap-3 p-4 rounded-2xl border ${row} transition-colors`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${light ? 'bg-red-50' : 'bg-red-500/10'}`}>
+                  <Shield size={18} className="text-red-500" strokeWidth={2} />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className={`font-semibold ${title} text-sm`}>Admin Panel</p>
+                  <p className={`${sub} text-xs`}>Manage products, stock & orders</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Lock size={12} className={sub} strokeWidth={2} />
+                  <ChevronRight size={16} className={sub} strokeWidth={2} />
+                </div>
+              </button>
+            </div>
+          )}
 
           {/* About */}
-          <div className="px-5 pt-4 pb-6">
+          <div className="px-5 pt-4 pb-4">
             <p className={`text-xs font-semibold ${sec} uppercase tracking-widest mb-3`}>About</p>
             <div className={`flex items-center gap-3 p-4 rounded-2xl border ${light ? 'border-gray-100' : 'border-white/5'}`}>
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${light ? 'bg-gray-50' : 'bg-slate-700'}`}>
                 <Info size={18} className={sub} strokeWidth={2} />
               </div>
               <div>
-                <p className={`font-semibold ${title} text-sm`}>Evaristo's Sari-Sari Store</p>
-                <p className={`${sub} text-xs`}>Version 1.0.0 · Est. 1993</p>
-                <p className={`${sub} text-xs`}>🇵🇭 Proudly Pinoy · Family Owned</p>
+                <p className={`font-semibold ${title} text-sm`}>eStore</p>
+                <p className={`${sub} text-xs`}>Version 1.0.0</p>
               </div>
             </div>
           </div>
+
+          {/* Logout */}
+          {onLogout && (
+            <div className="px-5 pb-6">
+              <button
+                onClick={() => { onClose(); onLogout() }}
+                className={`w-full flex items-center gap-3 p-4 rounded-2xl border transition-colors ${
+                  light
+                    ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
+                    : 'border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                }`}
+              >
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${light ? 'bg-red-200' : 'bg-red-500/20'}`}>
+                  <LogOut size={18} strokeWidth={2} />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className={`font-semibold text-sm`}>Logout</p>
+                  <p className={`${light ? 'text-red-500' : 'text-red-400'} text-xs`}>Sign out of your account</p>
+                </div>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

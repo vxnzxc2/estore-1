@@ -10,7 +10,7 @@ interface Props {
   light?: boolean
 }
 
-const DUE_DAYS = 7
+const DUE_DAYS = 3
 
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Cash on Delivery', icon: Banknote, color: 'text-green-600', desc: 'Pay deposit via GCash/Maya' },
@@ -60,7 +60,7 @@ export default function PreOrderPaymentModal({ preOrderItems, total, onConfirm, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-      <div className={`${bg} border rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md overflow-hidden animate-slide-up sm:animate-fade-up max-h-[90vh] flex flex-col`}>
+      <div className={`${bg} border rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md overflow-hidden animate-slide-up sm:animate-fade-up max-h-[88vh] sm:max-h-[90vh] flex flex-col`}>
 
         {/* Header */}
         <div className={`flex items-center justify-between px-5 py-4 border-b ${sep} shrink-0`}>
@@ -125,19 +125,25 @@ export default function PreOrderPaymentModal({ preOrderItems, total, onConfirm, 
                 </div>
               </div>
 
-              {/* Due Date Info */}
-              <div className={`p-4 rounded-2xl border ${light ? 'border-gray-200 bg-gray-50' : 'border-white/5 bg-slate-900/40'} space-y-2`}>
-                <div className="flex items-center gap-2">
-                  <Clock size={14} className="text-blue-500" strokeWidth={2} />
-                  <p className={`text-sm font-semibold ${title}`}>Down Payment Due Date</p>
+              {/* Due Date Info - 3 Days Only */}
+              <div className={`p-5 rounded-2xl border-2 ${light ? 'border-blue-200 bg-blue-50' : 'border-blue-500/30 bg-blue-500/10'} space-y-3 text-center`}>
+                <div className="flex items-center justify-center gap-2">
+                  <Clock size={18} className="text-blue-500" strokeWidth={2} />
+                  <p className={`text-sm font-bold ${title}`}>Payment Deadline</p>
                 </div>
-                <div className="text-center">
-                  <p className={`text-2xl font-bold ${title}`} style={{ fontFamily: 'Syne, sans-serif' }}>
-                    {DUE_DAYS} days
+                <div>
+                  <p className={`text-4xl font-bold ${title}`} style={{ fontFamily: 'Syne, sans-serif' }}>
+                    3 DAYS
                   </p>
-                  <p className={`text-xs ${sub} mt-1`}>Due by {dueDateDisplay}</p>
+                  <p className={`text-xs ${sub} mt-2`}>to pay down payment</p>
                 </div>
-                <p className={`text-xs ${sub} text-center`}>Pay the down payment within 1 week or the pre-order will be automatically cancelled.</p>
+                <div className={`pt-3 border-t ${light ? 'border-blue-200' : 'border-blue-500/20'}`}>
+                  <p className={`text-xs ${sub} mb-1`}>Due by:</p>
+                  <p className={`text-lg font-bold text-blue-600 dark:text-blue-400`}>
+                    {dueDateDisplay}
+                  </p>
+                </div>
+                <p className={`text-xs ${sub}`}>Order will be cancelled if payment is not received by this date</p>
               </div>
 
               {/* Payment Methods */}
@@ -148,14 +154,14 @@ export default function PreOrderPaymentModal({ preOrderItems, total, onConfirm, 
                     <button
                       key={method.id}
                       onClick={() => setSelectedMethod(method.id)}
-                      className={`w-full flex items-start gap-3 p-3 rounded-xl border-2 transition-all ${
+                      className={`w-full flex items-start gap-3 p-3 sm:p-3 rounded-xl border-2 transition-all active:scale-95 ${
                         selectedMethod === method.id ? selBdr : unselBdr
                       }`}
                     >
                       <method.icon size={18} className={method.color} strokeWidth={2} />
-                      <div className="text-left flex-1">
-                        <p className={`font-semibold text-sm ${title}`}>{method.label}</p>
-                        <p className={`text-xs ${sub}`}>{method.desc}</p>
+                      <div className="text-left flex-1 min-w-0">
+                        <p className={`font-semibold text-sm ${title} line-clamp-1`}>{method.label}</p>
+                        <p className={`text-xs ${sub} line-clamp-2`}>{method.desc}</p>
                       </div>
                       {selectedMethod === method.id && <Check size={18} className="text-blue-500 shrink-0" strokeWidth={3} />}
                     </button>
@@ -167,7 +173,7 @@ export default function PreOrderPaymentModal({ preOrderItems, total, onConfirm, 
               <button
                 onClick={handleContinue}
                 disabled={!selectedMethod}
-                className="w-full py-3 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20 transition-colors active:scale-95"
+                className="w-full py-3 sm:py-3 px-4 rounded-xl text-sm sm:text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20 transition-colors active:scale-95"
               >
                 Continue to Payment
               </button>
@@ -207,14 +213,14 @@ export default function PreOrderPaymentModal({ preOrderItems, total, onConfirm, 
               <div className="space-y-2 pt-2">
                 <button
                   onClick={handleConfirm}
-                  className="w-full py-3 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition-colors active:scale-95"
+                  className="w-full py-3 sm:py-3 px-4 rounded-xl text-sm sm:text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition-colors active:scale-95"
                 >
                   <Check size={14} className="inline mr-2" strokeWidth={3} />
                   Confirm Down Payment
                 </button>
                 <button
                   onClick={() => setStep('method')}
-                  className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${light ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`}
+                  className={`w-full py-2.5 sm:py-2.5 px-4 rounded-xl text-sm sm:text-sm font-semibold transition-colors active:scale-95 ${light ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`}
                 >
                   Back
                 </button>

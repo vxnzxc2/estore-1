@@ -82,7 +82,7 @@ export default function Calculator({ light, onClose }: Props) {
     <button
       key={String(label)}
       onClick={() => press(key)}
-      className={`h-14 rounded-2xl border font-semibold text-lg transition-all active:scale-90 flex items-center justify-center gap-1 ${cls} ${span ? 'col-span-2' : ''}`}
+      className={`h-11 sm:h-14 rounded-xl sm:rounded-2xl border font-semibold text-sm sm:text-lg transition-all active:scale-90 flex items-center justify-center gap-1 ${cls} ${span ? 'col-span-2' : ''}`}
     >
       {label}
     </button>
@@ -106,15 +106,15 @@ export default function Calculator({ light, onClose }: Props) {
           </button>
         </div>
 
-        <div className="flex-1 flex flex-col py-4 pt-8 gap-3">
+        <div className="flex-1 flex flex-col px-3 py-3 gap-2 sm:gap-3">
           {/* Display */}
-          <div className={`${scrn} rounded-2xl px-5 py-4 flex flex-col items-end justify-end min-h-[90px]`}>
+          <div className={`${scrn} rounded-2xl px-4 py-3 flex flex-col items-end justify-end min-h-[60px] sm:min-h-[80px]`}>
             {prevVal && op && <p className={`text-xs ${sub} mb-1`}>{prevVal} {op}</p>}
             <p className={`font-bold ${titl} font-mono tracking-tight ${dispSize}`}>{disp}</p>
           </div>
 
           {/* Buttons */}
-          <div className="grid grid-cols-4 gap-2 flex-1 content-start">
+          <div className="grid grid-cols-4 gap-1 sm:gap-2 flex-1 auto-rows-fr">
             {B('AC',  'AC',  ac)}
             {B('DEL', 'DEL', dl)}
             {B('%',   '%',   o)}

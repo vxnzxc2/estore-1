@@ -146,7 +146,7 @@ export default function ProfilePanel({ user, light, onClose, onRequestTopUp, onR
               </div>
               <div>
                 <p className={`font-semibold ${title}`}>Safe, local checkout</p>
-                <p className={`${sub} text-xs mt-1`}>Your wallet stays with you for everyday sari-sari purchases.</p>
+                <p className={`${sub} text-xs mt-1`}>Your wallet stays with you for everyday purchases.</p>
               </div>
             </div>
             <div className={`mt-4 rounded-3xl border ${light ? 'border-gray-200' : 'border-white/5'} p-4 ${light ? 'bg-slate-50' : 'bg-slate-900/60'}`}>

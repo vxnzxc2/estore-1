@@ -5,6 +5,7 @@ export interface FeaturedTag {
 }
 
 export type MembershipPlan = 'Free' | 'Pro' | 'Max'
+export type UserRole = 'owner' | 'employee' | 'buyer'
 
 export interface UserProfile {
   id: string
@@ -14,6 +15,7 @@ export interface UserProfile {
   membership: MembershipPlan
   walletBalance: number
   points: number
+  role: UserRole
 }
 
 export interface Product {

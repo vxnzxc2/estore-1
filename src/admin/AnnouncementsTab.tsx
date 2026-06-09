@@ -56,7 +56,7 @@ export default function AnnouncementsTab({ announcements, onAdd, onRemove, light
   }
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
@@ -117,7 +117,7 @@ export default function AnnouncementsTab({ announcements, onAdd, onRemove, light
           <div className="flex gap-2 pt-1">
             <button onClick={handleSend} disabled={!title.trim() || !message.trim()}
               className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
-              <Megaphone size={14} strokeWidth={2.5} /> Send Announcement
+              <Megaphone size={16} strokeWidth={2} /> Send Announcement
             </button>
             <button onClick={() => { setShowForm(false); setTitle(''); setMessage('') }}
               className={`px-4 py-2 rounded-xl text-sm border transition-colors ${light ? 'border-gray-200 text-gray-500' : 'border-slate-600 text-slate-400'}`}>
@@ -131,7 +131,7 @@ export default function AnnouncementsTab({ announcements, onAdd, onRemove, light
       <div className={`${card} rounded-2xl overflow-hidden`}>
         {announcements.length === 0 ? (
           <div className="flex flex-col items-center py-14 gap-3">
-            <Megaphone size={36} strokeWidth={1} className={light ? 'text-gray-300' : 'text-slate-700'} />
+            <Megaphone size={40} strokeWidth={1.5} className={light ? 'text-amber-200' : 'text-amber-500/50'} />
             <p className={`${sub} text-sm font-medium`}>No announcements yet</p>
             <p className={`${sub} text-xs`}>Create one to notify your customers</p>
           </div>

@@ -220,6 +220,73 @@ app.post('/api/pre-orders', async (req, res) => {
   }
 })
 
+// ── USERS/AUTH ENDPOINTS ────────────────────────────────────────
+// User Login
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body
+  try {
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' })
+    }
+
+    const result = await pool.query(
+      'SELECT id, email, name, phone, role, membership, wallet_balance, points FROM users WHERE email = $1 AND password = $2',
+      [email, password]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid email or password' })
+    }
+
+    const user = result.rows[0]
+    res.json({
+      success: true,
+      user: {
+        id: `user-${user.id}`,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+        membership: user.membership,
+        walletBalance: parseFloat(user.wallet_balance),
+        points: user.points,
+      },
+    })
+  } catch (err) {
+    console.error('Error during login:', err)
+    res.status(500).json({ error: 'Login failed' })
+  }
+})
+
+// Get User by Email
+app.get('/api/users/:email', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, email, name, phone, role, membership, wallet_balance, points FROM users WHERE email = $1',
+      [req.params.email]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const user = result.rows[0]
+    res.json({
+      id: `user-${user.id}`,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+      membership: user.membership,
+      walletBalance: parseFloat(user.wallet_balance),
+      points: user.points,
+    })
+  } catch (err) {
+    console.error('Error fetching user:', err)
+    res.status(500).json({ error: 'Failed to fetch user' })
+  }
+})
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' })

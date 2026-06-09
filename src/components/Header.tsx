@@ -25,9 +25,8 @@ export default function Header({ totalQty, time, onCartOpen, onProfileOpen, user
           </div>
           <div>
             <p className={`${title} font-bold text-sm leading-none`} style={{ fontFamily: 'Syne, sans-serif' }}>
-              Evaristo's
+              eStore
             </p>
-            <p className={`${sub} text-[10px] tracking-widest uppercase`}>Sari-Sari Store</p>
           </div>
         </div>
 

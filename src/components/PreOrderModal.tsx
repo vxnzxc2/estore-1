@@ -40,7 +40,7 @@ export default function PreOrderModal({ product, light, onConfirm, onCancel }: P
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-      <div className={`${bg} border rounded-t-3xl sm:rounded-2xl w-full sm:max-w-lg overflow-hidden animate-slide-up sm:animate-fade-up max-h-[92vh] flex flex-col`}>
+      <div className={`${bg} border rounded-t-3xl sm:rounded-2xl w-full sm:max-w-lg overflow-hidden animate-slide-up sm:animate-fade-up max-h-[90vh] sm:max-h-[92vh] flex flex-col`}>
 
         {/* Header */}
         <div className={`flex items-center justify-between px-5 py-4 border-b ${sep} shrink-0`}>
@@ -144,16 +144,16 @@ export default function PreOrderModal({ product, light, onConfirm, onCancel }: P
         </div>
 
         {/* Action buttons */}
-        <div className={`flex gap-2 px-5 py-4 border-t ${sep} shrink-0 bg-opacity-50`}>
+        <div className={`flex gap-2 px-4 sm:px-5 py-4 sm:py-4 border-t ${sep} shrink-0 bg-opacity-50`}>
           <button
             onClick={onCancel}
-            className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-colors ${light ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`}
+            className={`flex-1 py-3 sm:py-3 px-3 rounded-xl text-sm sm:text-sm font-semibold transition-colors ${light ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`}
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition-colors"
+            className="flex-1 py-3 sm:py-3 px-3 rounded-xl text-sm sm:text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition-colors active:scale-95"
           >
             Pre-Order Now
           </button>

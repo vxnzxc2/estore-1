@@ -6,10 +6,10 @@ interface Props {
 }
 
 const STORES = [
-  { id: 1, name: "Evaristo's Main Branch",   address: 'Blk 3 Lot 5, Sampaguita St., Maynila',       phone: '0912-345-6789', hours: '6AM–10PM', distance: '0.2 km', open: true  },
-  { id: 2, name: "Evaristo's Tondo Branch",  address: '123 Honesto St., Tondo, Manila',              phone: '0923-456-7890', hours: '7AM–9PM',  distance: '1.4 km', open: true  },
-  { id: 3, name: "Evaristo's Sta. Mesa",     address: '45 Piy Margal St., Sta. Mesa, Manila',        phone: '0934-567-8901', hours: '6AM–10PM', distance: '2.1 km', open: false },
-  { id: 4, name: "Evaristo's Pandacan",      address: '78 Industrial Valley Complex, Pandacan',      phone: '0945-678-9012', hours: '8AM–8PM',  distance: '3.5 km', open: true  },
+  { id: 1, name: "eStore Main Branch",   address: 'Blk 3 Lot 5, Sampaguita St., Maynila',       phone: '0912-345-6789', hours: '6AM–10PM', distance: '0.2 km', open: true  },
+  { id: 2, name: "eStore Tondo Branch",  address: '123 Honesto St., Tondo, Manila',              phone: '0923-456-7890', hours: '7AM–9PM',  distance: '1.4 km', open: true  },
+  { id: 3, name: "eStore Sta. Mesa",     address: '45 Piy Margal St., Sta. Mesa, Manila',        phone: '0934-567-8901', hours: '6AM–10PM', distance: '2.1 km', open: false },
+  { id: 4, name: "eStore Pandacan",      address: '78 Industrial Valley Complex, Pandacan',      phone: '0945-678-9012', hours: '8AM–8PM',  distance: '3.5 km', open: true  },
 ]
 
 export default function StoreLocator({ onClose, light }: Props) {
@@ -33,7 +33,7 @@ export default function StoreLocator({ onClose, light }: Props) {
             </div>
             <div>
               <h2 className={`font-bold ${title} text-base`} style={{ fontFamily: 'Syne, sans-serif' }}>Find a Store</h2>
-              <p className={`${sub} text-xs`}>Nearest Evaristo's branches</p>
+              <p className={`${sub} text-xs`}>Nearest eStore branches</p>
             </div>
           </div>
           <button onClick={onClose} className={`w-8 h-8 rounded-lg flex items-center justify-center ${light ? 'bg-gray-100 text-gray-500' : 'bg-slate-800 text-slate-400'}`}>

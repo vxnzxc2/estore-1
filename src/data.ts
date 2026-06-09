@@ -16,7 +16,7 @@ export const CAT_COLORS: Record<string, string> = {
 }
 
 export const PROMO_MESSAGES: string[] = [
-  '🎉 Mabuhay sa Tindahan ni Evaristo!',
+  '🎉 Welcome to eStore!',
   '🚚 FREE delivery sa ₱1000+ na order!',
   '🔥 Bagong dating: Spam Lite at Gatorade Blue!',
   '⚡ Araw-araw mababang presyo!',

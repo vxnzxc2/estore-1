@@ -17,8 +17,7 @@ export default function Footer({ light }: Props) {
             <Store size={18} className="text-white" strokeWidth={2.5} />
           </div>
           <div>
-            <p className={`font-bold ${title} text-sm`} style={{ fontFamily: 'Syne, sans-serif' }}>Evaristo's Sari-Sari Store</p>
-            <p className={`${muted} text-xs`}>Est. 1993 · Family Owned · 🇵🇭 Proudly Pinoy</p>
+            <p className={`font-bold ${title} text-sm`} style={{ fontFamily: 'Syne, sans-serif' }}>eStore</p>
           </div>
         </div>
         <div className={`space-y-1.5 text-xs ${sub}`}>
@@ -27,7 +26,7 @@ export default function Footer({ light }: Props) {
           <div className="flex items-center gap-2"><Clock size={12} strokeWidth={2} className={acc} /><span>Open daily 6:00 AM – 10:00 PM</span></div>
         </div>
         <p className={`${muted} text-[10px] mt-4 pt-3 border-t ${light ? 'border-gray-100' : 'border-white/5'}`}>
-          © 2024 Tindahan ni Evaristo. All rights reserved.
+          © 2024 eStore. All rights reserved.
         </p>
       </div>
     </footer>

@@ -35,11 +35,11 @@ function CartItemRow({ item, selected, onSelect, onQtyChange, light }: {
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isKg) {
       const val = parseFloat(e.target.value.replace(/[^0-9.]/g, '')) || MIN
-      const max = item.stock > 0 ? item.stock : Infinity
+      const max = item.stock || 0
       onQtyChange(item.id, parseFloat(Math.min(Math.max(val, MIN), max).toFixed(2)))
     } else {
       const raw = e.target.value.replace(/[^0-9]/g, '')
-      const max = item.stock > 0 ? item.stock : Infinity
+      const max = item.stock || 0
       onQtyChange(item.id, Math.min(Math.max(1, raw === '' ? 1 : parseInt(raw)), max))
     }
   }
@@ -72,9 +72,14 @@ function CartItemRow({ item, selected, onSelect, onQtyChange, light }: {
         <input type="text" inputMode={isKg ? 'decimal' : 'numeric'} value={isKg ? Number(item.qty).toFixed(1) : item.qty} onChange={handleInput}
           className={`w-8 text-center font-bold text-xs bg-transparent outline-none tabular-nums ${light ? 'text-gray-800' : 'text-white'}`} />
         <button onClick={() => onQtyChange(item.id, parseFloat((item.qty + STEP).toFixed(2)))}
-          disabled={item.stock > 0 && item.qty >= item.stock}
+          disabled={item.stock <= 0 || item.qty >= item.stock}
           className={`w-7 h-7 flex items-center justify-center ${qtyBtn} transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed`}>+</button>
       </div>
+      {item.stock <= 0 && (
+        <div className={`absolute right-2 top-2 px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 ${light ? 'bg-red-50 text-red-600' : 'bg-red-500/20 text-red-400'}`}>
+          <AlertTriangle size={12} /> Out of Stock
+        </div>
+      )}
     </div>
   )
 }

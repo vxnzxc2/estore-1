@@ -18,7 +18,7 @@ export function useStore() {
   const [advanceOrders,  setAdvanceOrders]  = useState<AdvanceOrder[]>([])
   const [preOrders,      setPreOrders]      = useState<PreOrder[]>([])
 
-  // ── Fetch products from database on mount ────────────────────
+  // ── Fetch products from database ────────────────────
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -152,15 +152,8 @@ export function useStore() {
   }, [])
 
   const updateStock = useCallback((id: number, stock: number) => {
-    fetch(`${API_URL}/products/${id}/stock`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stock }),
-    })
-      .then(() => {
-        setProducts(prev => prev.map(p => p.id === id ? { ...p, stock } : p))
-      })
-      .catch(err => console.error('Failed to update stock:', err))
+    // Update locally - database is updated server-side
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, stock } : p))
   }, [])
 
   const removeProduct = useCallback((id: number) => {
@@ -204,8 +197,10 @@ export function useStore() {
   const placeOrder = useCallback((cart: CartItem[], method: string, fulfillment: string, payLaterTerm?: number) => {
     const total       = cart.reduce((s, i) => s + i.price * i.qty, 0)
     const deliveryFee = fulfillment === 'pickup' ? 0 : total >= FREE_DELIVERY_AT ? 0 : 50
+    const orderId     = `ORD-${Date.now()}-${nextOrderId++}`
+
     const order: Order = {
-      id:          `ORD-${Date.now()}-${nextOrderId++}`,
+      id:          orderId,
       items:       cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, image: i.image, category: i.category })),
       total,
       deliveryFee,
@@ -216,6 +211,28 @@ export function useStore() {
       fulfillment,
       payLaterTerm,
     }
+
+    // Save order to database and update stock
+    fetch(`${API_URL}/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order),
+    })
+      .then(res => res.json())
+      .then(data => {
+        console.log('Order saved:', data)
+        // Update local stock after order is saved
+        setProducts(prev =>
+          prev.map(p => {
+            const cartItem = cart.find(c => c.id === p.id)
+            return cartItem ? { ...p, stock: Math.max(0, p.stock - cartItem.qty) } : p
+          })
+        )
+      })
+      .catch(err => {
+        console.error('Failed to place order:', err)
+      })
+
     setOrders(prev => [order, ...prev])
     setAnnouncements(prev => [{
       id: nextAnnouncementId++,

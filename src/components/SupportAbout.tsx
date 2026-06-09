@@ -174,7 +174,7 @@ export default function SupportAbout({ onClose, light }: Props) {
               {screenTitles[screen]}
             </h2>
             {screen === 'main' && (
-              <p className={`text-xs ${sub}`}>Evaristo's Sari-Sari Store · v1.0.0</p>
+              <p className={`text-xs ${sub}`}>eStore · v1.0.0</p>
             )}
           </div>
           <button
@@ -200,9 +200,8 @@ export default function SupportAbout({ onClose, light }: Props) {
                 </div>
                 <div>
                   <p className={`font-bold ${title} text-base`} style={{ fontFamily: 'Syne, sans-serif' }}>
-                    Evaristo's
+                    eStore
                   </p>
-                  <p className={`text-xs ${sub}`}>Sari-Sari Store · Est. 1993</p>
                   <div className="flex items-center gap-1 text-xs">
                     <Flag size={12} className="text-red-500" strokeWidth={2} />
                     <span className={sub}>Proudly Pinoy · Family Owned</span>
@@ -266,7 +265,7 @@ export default function SupportAbout({ onClose, light }: Props) {
               </div>
 
               <p className={`text-center text-[10px] ${sub} pb-2`}>
-                © 2024 Tindahan ni Evaristo. All rights reserved.
+                © 2024 eStore. All rights reserved.
               </p>
             </>
           )}
@@ -352,7 +351,7 @@ export default function SupportAbout({ onClose, light }: Props) {
               </InfoCard>
 
               <InfoCard title="Security Alerts" light={light}>
-                <p>We will never ask for your password via SMS or chat. If you receive a suspicious message claiming to be from Evaristo's, do not click any links and report it immediately.</p>
+                <p>We will never ask for your password via SMS or chat. If you receive a suspicious message claiming to be from eStore, do not click any links and report it immediately.</p>
               </InfoCard>
             </>
           )}
@@ -361,7 +360,7 @@ export default function SupportAbout({ onClose, light }: Props) {
           {screen === 'privacy_safety' && (
             <>
               <InfoCard title="Privacy Policy" light={light}>
-                <p>Evaristo's Sari-Sari Store collects only the information necessary to process your orders and improve your shopping experience.</p>
+                <p>eStore collects only the information necessary to process your orders and improve your shopping experience.</p>
                 <p><strong>What we collect:</strong> Name, contact number, delivery address, and order history.</p>
                 <p><strong>What we do NOT collect:</strong> Full payment card numbers, government IDs, or unnecessary personal data.</p>
                 <p>Your data is stored securely and never sold to third parties.</p>
@@ -412,7 +411,7 @@ export default function SupportAbout({ onClose, light }: Props) {
           {screen === 'terms' && (
             <>
               <InfoCard title="1. Acceptance of Terms" light={light}>
-                <p>By using Evaristo's Sari-Sari Store application, you agree to be bound by these Terms and Conditions. If you do not agree, please discontinue use of the app.</p>
+                <p>By using eStore application, you agree to be bound by these Terms and Conditions. If you do not agree, please discontinue use of the app.</p>
               </InfoCard>
 
               <InfoCard title="2. Use of Service" light={light}>
@@ -432,7 +431,7 @@ export default function SupportAbout({ onClose, light }: Props) {
               </InfoCard>
 
               <InfoCard title="4. Delivery" light={light}>
-                <p>Delivery times are estimates and may vary. Evaristo's is not liable for delays caused by weather, traffic, or other circumstances beyond our control. Free delivery applies to orders of ₱1,000 and above within our service area.</p>
+                <p>Delivery times are estimates and may vary. eStore is not liable for delays caused by weather, traffic, or other circumstances beyond our control. Free delivery applies to orders of ₱1,000 and above within our service area.</p>
               </InfoCard>
 
               <InfoCard title="5. Privacy" light={light}>
@@ -440,7 +439,7 @@ export default function SupportAbout({ onClose, light }: Props) {
               </InfoCard>
 
               <InfoCard title="6. Intellectual Property" light={light}>
-                <p>All content, branding, and design elements of this application are owned by Evaristo's Sari-Sari Store. Unauthorized reproduction or distribution is prohibited.</p>
+                <p>All content, branding, and design elements of this application are owned by eStore. Unauthorized reproduction or distribution is prohibited.</p>
               </InfoCard>
 
               <InfoCard title="7. Changes to Terms" light={light}>
