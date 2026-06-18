@@ -308,7 +308,10 @@ wss.on('connection', async (ws) => {
   ws.on('close', () => console.log('[WS] client disconnected'))
 })
 
-server.listen(3001, '0.0.0.0', () => {
-  console.log('[Server] ✅ http://localhost:3001')
-  console.log('[Database] Connected to Neon')
-})
+// Dynamic port fallback for local development
+const PORT = process.env.PORT || 3001;
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Server] ✅ Running on port ${PORT}`);
+  console.log('[Database] Connected to Neon');
+});
