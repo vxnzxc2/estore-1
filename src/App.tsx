@@ -25,6 +25,7 @@ import TopUpWalletModal       from './components/TopUpWalletModal'
 import AdvanceOrderModal      from './components/AdvanceOrderModal'
 import PreOrderModal          from './components/PreOrderModal'
 import UserLoginPage          from './components/UserLoginPage'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export default function App() {
   const {
@@ -157,15 +158,15 @@ export default function App() {
     const cartTotal   = regularItems.reduce((sum, i) => sum + i.price * i.qty, 0)
     const deliveryFee = fulfillment === 'pickup' ? 0 : cartTotal >= 1000 ? 0 : 50
 
-    fetch('http://localhost:3001/api/orders', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: orderId, items: regularItems, total: cartTotal, deliveryFee,
-        grandTotal: cartTotal + deliveryFee, placedAt: new Date().toISOString(),
-        status: 'completed', method, fulfillment,
-      }),
-    }).catch(() => {})
+   fetch(`${API_BASE_URL}/api/orders`, {
+  method:  'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    id: orderId, items: regularItems, total: cartTotal, deliveryFee,
+    grandTotal: cartTotal + deliveryFee, placedAt: new Date().toISOString(),
+    status: 'completed', method, fulfillment,
+  }),
+}).catch(() => {})
 
     placeOrder(regularItems, method, fulfillment, payLaterTerm)
 
