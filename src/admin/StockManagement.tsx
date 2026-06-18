@@ -127,14 +127,38 @@ export default function StockManagement({ products, onUpdateStock, light }: Prop
                 {/* Stock Display/Edit */}
                 {editingId === product.id ? (
                   <div className="space-y-2">
-                    <input
-                      type="number"
-                      min="0"
-                      value={editValue}
-                      onChange={e => setEditValue(e.target.value)}
-                      autoFocus
-                      className={`w-full border rounded-lg px-3 py-2 text-center text-lg font-bold outline-none transition-colors ${inp}`}
-                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditValue(v => String(Math.max(0, (parseInt(v) || 0) - 1)))}
+                        className={`w-10 h-10 flex items-center justify-center rounded-lg border font-semibold transition-colors shrink-0 ${
+                          light
+                            ? 'bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-750'
+                            : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'
+                        }`}
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editValue}
+                        onChange={e => setEditValue(e.target.value)}
+                        autoFocus
+                        className={`flex-1 border rounded-lg px-3 py-2 text-center text-lg font-bold outline-none transition-colors ${inp}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditValue(v => String((parseInt(v) || 0) + 1))}
+                        className={`w-10 h-10 flex items-center justify-center rounded-lg border font-semibold transition-colors shrink-0 ${
+                          light
+                            ? 'bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-750'
+                            : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'
+                        }`}
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleSave(product.id)}

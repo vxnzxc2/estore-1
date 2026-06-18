@@ -37,7 +37,7 @@ export default function EmployeesTab({ employees, onAdd, onUpdate, onRemove, lig
   const handleAdd = () => {
     if (!form.email || !form.name || !form.password) return alert('Fill all fields')
     if (form.password.length < 6) return alert('Password must be 6+ characters')
-    onAdd(form)
+    onAdd({ ...form, membership: 'Pro' })
     setForm({ email: '', name: '', phone: '', password: '', role: 'employee' })
     setShowForm(false)
   }

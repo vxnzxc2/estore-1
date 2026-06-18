@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import * as LucideIcons from 'lucide-react'
-import { Plus, Trash2, Edit3, Check, X, Search, ImageOff, ChevronDown, ChevronUp, Camera, Zap } from 'lucide-react'
+import { Plus, Minus, Trash2, Edit3, Check, X, Search, ImageOff, ChevronDown, ChevronUp, Camera, Zap } from 'lucide-react'
 import type { Product, FeaturedTag } from '../types'
 import Quagga from '@ericblade/quagga2'
 
@@ -410,6 +410,21 @@ export default function ProductsTab({ products, categories, onAdd, onRemove, onU
               <div className="sm:col-span-2">
                 <label className={`text-xs ${lbl} mb-1 block`}>Stock *</label>
                 <div className="flex gap-2 items-center">
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => {
+                      const current = Number(f.stock) || 0
+                      const step = f.stockUnit === 'kg' ? 0.1 : 1
+                      return { ...f, stock: Math.max(0, parseFloat((current - step).toFixed(2))) }
+                    })}
+                    className={`w-10 h-10 flex items-center justify-center rounded-xl border font-semibold transition-colors shrink-0 ${
+                      light
+                        ? 'bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-750'
+                        : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'
+                    }`}
+                  >
+                    <Minus size={16} />
+                  </button>
                   <input
                     type="number" min="0"
                     step={form.stockUnit === 'kg' ? '0.01' : '1'}
@@ -417,6 +432,21 @@ export default function ProductsTab({ products, categories, onAdd, onRemove, onU
                     value={form.stock || ''}
                     onChange={e => setForm(f => ({ ...f, stock: form.stockUnit === 'kg' ? parseFloat(e.target.value) || 0 : parseInt(e.target.value) || 0 }))}
                     className={`flex-1 border rounded-xl px-3 py-2 text-sm outline-none transition-colors ${inp}`} />
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => {
+                      const current = Number(f.stock) || 0
+                      const step = f.stockUnit === 'kg' ? 0.1 : 1
+                      return { ...f, stock: parseFloat((current + step).toFixed(2)) }
+                    })}
+                    className={`w-10 h-10 flex items-center justify-center rounded-xl border font-semibold transition-colors shrink-0 ${
+                      light
+                        ? 'bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-750'
+                        : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'
+                    }`}
+                  >
+                    <Plus size={16} />
+                  </button>
                   <div className="flex rounded-xl overflow-hidden border shrink-0 ${light ? 'border-gray-300' : 'border-slate-600'}">
                     {(['pcs', 'kg'] as const).map(u => (
                       <button key={u} type="button" onClick={() => setForm(f => ({ ...f, stockUnit: u }))}
@@ -589,12 +619,42 @@ export default function ProductsTab({ products, categories, onAdd, onRemove, onU
                             <div className="col-span-2 sm:col-span-3">
                               <label className={`text-xs ${lbl} mb-1 block`}>Stock</label>
                               <div className="flex gap-2 items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditForm(f => {
+                                    const current = Number(f.stock) || 0
+                                    const step = (f.stockUnit || 'pcs') === 'kg' ? 0.1 : 1
+                                    return { ...f, stock: Math.max(0, parseFloat((current - step).toFixed(2))) }
+                                  })}
+                                  className={`w-10 h-10 flex items-center justify-center rounded-xl border font-semibold transition-colors shrink-0 ${
+                                    light
+                                      ? 'bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-750'
+                                      : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'
+                                  }`}
+                                >
+                                  <Minus size={16} />
+                                </button>
                                 <input
                                   type="number" min="0"
                                   step={(editForm.stockUnit || 'pcs') === 'kg' ? '0.01' : '1'}
                                   value={editForm.stock ?? ''}
                                   onChange={e => setEditForm(f => ({ ...f, stock: (f.stockUnit || 'pcs') === 'kg' ? parseFloat(e.target.value) || 0 : parseInt(e.target.value) || 0 }))}
                                   className={`flex-1 border rounded-xl px-3 py-2 text-sm outline-none transition-colors ${inp}`} />
+                                <button
+                                  type="button"
+                                  onClick={() => setEditForm(f => {
+                                    const current = Number(f.stock) || 0
+                                    const step = (f.stockUnit || 'pcs') === 'kg' ? 0.1 : 1
+                                    return { ...f, stock: parseFloat((current + step).toFixed(2)) }
+                                  })}
+                                  className={`w-10 h-10 flex items-center justify-center rounded-xl border font-semibold transition-colors shrink-0 ${
+                                    light
+                                      ? 'bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-750'
+                                      : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white'
+                                  }`}
+                                >
+                                  <Plus size={16} />
+                                </button>
                                 <div className={`flex rounded-xl overflow-hidden border shrink-0 ${light ? 'border-gray-300' : 'border-slate-600'}`}>
                                   {(['pcs', 'kg'] as const).map(u => (
                                     <button key={u} type="button" onClick={() => setEditForm(f => ({ ...f, stockUnit: u }))}

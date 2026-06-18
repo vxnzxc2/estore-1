@@ -538,7 +538,7 @@ export default function ActivityScreen({
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${
                           preOrder.status === 'pending'
                             ? light ? 'bg-orange-50 text-orange-500' : 'bg-orange-500/10 text-orange-400'
-                            : preOrder.status === 'completed'
+                            : preOrder.status === 'paid'
                             ? light ? 'bg-green-50 text-green-500' : 'bg-green-500/10 text-green-400'
                             : light ? 'bg-red-50 text-red-500' : 'bg-red-500/10 text-red-400'
                         }`}>
